@@ -79,8 +79,8 @@ static void print_database(void)
 
 	printf("Interval: %u - Usage: %"PRIu64"/%"PRIu64" Bytes\n\n",
 	       db_timestamp(gdbh->db),
-	       db_size(gdbh->db, db_entries(gdbh->db)),
-	       db_size(gdbh->db, gdbh->size));
+	       (uint64_t)db_size(gdbh->db, db_entries(gdbh->db)),
+	       (uint64_t)db_size(gdbh->db, gdbh->size));
 
 	for (i = 0; i < db_entries(gdbh->db); i++) {
 		r = db_record(gdbh->db, i);
