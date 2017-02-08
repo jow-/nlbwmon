@@ -421,7 +421,7 @@ database_restore_gzip(struct dbhandle *h, const char *path, uint32_t timestamp)
 
 	entries = db_entries(&hdr);
 
-	if (h->limit > 0 && h->limit < entries)
+	if (h && h->limit > 0 && h->limit < entries)
 		entries = h->limit;
 
 	if (be32toh(hdr.magic) != MAGIC) {
@@ -434,18 +434,20 @@ database_restore_gzip(struct dbhandle *h, const char *path, uint32_t timestamp)
 		return -EINVAL;
 	}
 
-	for (i = 0; i < entries; i++) {
-		if (gzread(gz, &rec, db_recsize) != db_recsize) {
+	if (h) {
+		for (i = 0; i < entries; i++) {
+			if (gzread(gz, &rec, db_recsize) != db_recsize) {
+				database_gzclose(gz);
+				return -ERANGE;
+			}
+
+			database_insert(h, &rec);
+		}
+
+		if (gzgetc(gz) != -1) {
 			database_gzclose(gz);
 			return -ERANGE;
 		}
-
-		database_insert(h, &rec);
-	}
-
-	if (gzgetc(gz) != -1) {
-		database_gzclose(gz);
-		return -ERANGE;
 	}
 
 	return database_gzclose(gz);
@@ -462,7 +464,7 @@ database_restore_mmap(struct dbhandle *h, const char *path, uint32_t timestamp,
 	if (filesize < sizeof(struct database))
 		return -ERANGE;
 
-	if (h->limit > 0)
+	if (h && h->limit > 0)
 		len = sizeof(struct database) + h->limit * db_recsize;
 
 	if (len > filesize)
@@ -480,7 +482,7 @@ database_restore_mmap(struct dbhandle *h, const char *path, uint32_t timestamp,
 
 	entries = db_entries(db);
 
-	if (h->limit > 0 && h->limit < entries)
+	if (h && h->limit > 0 && h->limit < entries)
 		entries = h->limit;
 
 	if (be32toh(db->magic) != MAGIC) {
@@ -490,6 +492,11 @@ database_restore_mmap(struct dbhandle *h, const char *path, uint32_t timestamp,
 
 	if (db->interval.type == 0 || db_timestamp(db) != timestamp) {
 		errno = EINVAL;
+		goto out;
+	}
+
+	if (!h) {
+		errno = 0;
 		goto out;
 	}
 
