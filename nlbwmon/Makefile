@@ -30,7 +30,7 @@ define Package/nlbwmon/install
 	$(INSTALL_DIR) $(1)/etc/init.d
 	$(INSTALL_BIN) ./files/nlbwmon.init $(1)/etc/init.d/nlbwmon
 	$(INSTALL_DIR) $(1)/etc/config
-	$(INSTALL_CONF) ./files/nlbwmon.config $(1)/etc/init.d/nlbwmon
+	$(INSTALL_CONF) ./files/nlbwmon.config $(1)/etc/config/nlbwmon
 endef
 
 $(eval $(call BuildPackage,nlbwmon))
