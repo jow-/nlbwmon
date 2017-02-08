@@ -57,6 +57,27 @@ handle_dump(int sock)
 }
 
 static int
+handle_list(int sock)
+{
+	int err;
+	int delta = 0;
+	uint32_t timestamp;
+
+	while (true) {
+		timestamp = interval_timestamp(&opt.archive_interval, delta--);
+		err = database_load(NULL, opt.db.directory, timestamp);
+
+		if (err)
+			break;
+
+		if (send(sock, &timestamp, sizeof(timestamp), 0) != sizeof(timestamp))
+			return -errno;
+	}
+
+	return 0;
+}
+
+static int
 handle_commit(int sock)
 {
 	uint32_t timestamp = interval_timestamp(&opt.archive_interval, 0);
@@ -75,6 +96,7 @@ handle_commit(int sock)
 
 static struct command commands[] = {
 	{ "dump", handle_dump },
+	{ "list", handle_list },
 	{ "commit", handle_commit },
 };
 

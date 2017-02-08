@@ -455,6 +455,35 @@ handle_json(int8_t *group_by, int8_t *order_by)
 }
 
 static int
+handle_list(int8_t *group_by, int8_t *order_by)
+{
+	int timestamp;
+	int ctrl_socket;
+
+	ctrl_socket = usock(USOCK_UNIX, opt.socket, NULL);
+
+	if (!ctrl_socket)
+		return -errno;
+
+	if (send(ctrl_socket, "list", 4, 0) != 4) {
+		close(ctrl_socket);
+		return -errno;
+	}
+
+	while (true) {
+		if (recv(ctrl_socket, &timestamp, sizeof(timestamp), 0) <= 0)
+			break;
+
+		printf("%04d-%02d-%02d\n",
+		       timestamp / 10000, timestamp % 10000 / 100, timestamp % 100);
+	}
+
+	close(ctrl_socket);
+
+	return 0;
+}
+
+static int
 handle_commit(int8_t *group_by, int8_t *order_by)
 {
 	char reply[128] = { };
@@ -484,6 +513,7 @@ handle_commit(int8_t *group_by, int8_t *order_by)
 static struct command commands[] = {
 	{ "show", handle_show },
 	{ "json", handle_json },
+	{ "list", handle_list },
 	{ "commit", handle_commit },
 };
 
