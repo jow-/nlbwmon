@@ -424,7 +424,7 @@ database_restore_gzip(struct dbhandle *h, const char *path, uint32_t timestamp)
 	if (h->limit > 0 && h->limit < entries)
 		entries = h->limit;
 
-	if (be32toh(hdr.magic) != MAGIC || entries == 0) {
+	if (be32toh(hdr.magic) != MAGIC) {
 		database_gzclose(gz);
 		return -EINVAL;
 	}
