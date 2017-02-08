@@ -92,7 +92,7 @@ static struct field fields[MAX] = {
 
 struct command {
 	const char *cmd;
-	int (*fn)(int8_t *group_by, int8_t *order_by);
+	int (*fn)(int timestamp, int8_t *group_by, int8_t *order_by);
 };
 
 
@@ -179,18 +179,22 @@ format_proto(uint8_t prnum)
 }
 
 static int
-recv_database(int8_t *group_by, int8_t *order_by, struct dbhandle **h)
+recv_database(int timestamp, int8_t *group_by, int8_t *order_by,
+              struct dbhandle **h)
 {
-	int i, err, ctrl_socket;
+	int i, len, err, ctrl_socket;
 	struct database db;
 	struct record rec;
+	char req[sizeof("dump YYYYMMDD\0")];
 
 	ctrl_socket = usock(USOCK_UNIX, opt.socket, NULL);
 
 	if (!ctrl_socket)
 		return -errno;
 
-	if (send(ctrl_socket, "dump", 4, 0) != 4) {
+	len = snprintf(req, sizeof(req), "dump %d", timestamp);
+
+	if (send(ctrl_socket, req, len, 0) != len) {
 		close(ctrl_socket);
 		return -errno;
 	}
@@ -228,7 +232,7 @@ recv_database(int8_t *group_by, int8_t *order_by, struct dbhandle **h)
 }
 
 static int
-handle_show(int8_t *group_by, int8_t *order_by)
+handle_show(int timestamp, int8_t *group_by, int8_t *order_by)
 {
 	struct dbhandle *h = NULL;
 	struct record *rec = NULL;
@@ -237,7 +241,7 @@ handle_show(int8_t *group_by, int8_t *order_by)
 	int8_t i, r, n;
 	int err;
 
-	err = recv_database(group_by, order_by, &h);
+	err = recv_database(timestamp, group_by, order_by, &h);
 
 	if (err != 0)
 		return err;
@@ -331,7 +335,7 @@ handle_show(int8_t *group_by, int8_t *order_by)
 }
 
 static int
-handle_json(int8_t *group_by, int8_t *order_by)
+handle_json(int timestamp, int8_t *group_by, int8_t *order_by)
 {
 	struct dbhandle *h = NULL;
 	struct record *rec = NULL;
@@ -340,7 +344,7 @@ handle_json(int8_t *group_by, int8_t *order_by)
 	int8_t i, r, n;
 	int err;
 
-	err = recv_database(group_by, order_by, &h);
+	err = recv_database(timestamp, group_by, order_by, &h);
 
 	if (err != 0)
 		return err;
@@ -455,9 +459,8 @@ handle_json(int8_t *group_by, int8_t *order_by)
 }
 
 static int
-handle_list(int8_t *group_by, int8_t *order_by)
+handle_list(int timestamp, int8_t *group_by, int8_t *order_by)
 {
-	int timestamp;
 	int ctrl_socket;
 
 	ctrl_socket = usock(USOCK_UNIX, opt.socket, NULL);
@@ -484,7 +487,7 @@ handle_list(int8_t *group_by, int8_t *order_by)
 }
 
 static int
-handle_commit(int8_t *group_by, int8_t *order_by)
+handle_commit(int timestamp, int8_t *group_by, int8_t *order_by)
 {
 	char reply[128] = { };
 	int ctrl_socket;
@@ -524,9 +527,11 @@ client_main(int argc, char **argv)
 	int8_t group_by[1 + MAX] = { }, order_by[1 + MAX] = { };
 	struct command *cmd = NULL;
 	int i, f, err, optchr;
+	int timestamp = 0;
+	unsigned int year, month, day;
 	char c, *p;
 
-	while ((optchr = getopt(argc, argv, "c:p:S:g:o:")) > -1) {
+	while ((optchr = getopt(argc, argv, "c:p:S:g:o:t:")) > -1) {
 		switch (optchr) {
 		case 'S':
 			opt.socket = optarg;
@@ -596,6 +601,15 @@ client_main(int argc, char **argv)
 			}
 
 			break;
+
+		case 't':
+			if (sscanf(optarg, "%4u-%2u-%2u", &year, &month, &day) != 3) {
+				fprintf(stderr, "Unrecognized date '%s'\n", optarg);
+				return 1;
+			}
+
+			timestamp = year * 10000 + month * 100 + day;
+			break;
 		}
 	}
 
@@ -626,7 +640,7 @@ client_main(int argc, char **argv)
 		return 1;
 	}
 
-	err = cmd->fn(group_by, order_by);
+	err = cmd->fn(timestamp, group_by, order_by);
 
 	if (err) {
 		fprintf(stderr, "Error while processing command: %s\n",

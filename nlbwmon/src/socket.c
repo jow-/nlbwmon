@@ -20,6 +20,7 @@
 #include <errno.h>
 #include <unistd.h>
 #include <string.h>
+#include <stdlib.h>
 #include <sys/stat.h>
 #include <sys/socket.h>
 
@@ -33,7 +34,7 @@
 
 struct command {
 	const char *cmd;
-	int (*cb)(int sock);
+	int (*cb)(int sock, const char *arg);
 };
 
 static int ctrl_socket;
@@ -42,22 +43,57 @@ static struct uloop_timeout sock_tm = { };
 
 
 static int
-handle_dump(int sock)
+handle_dump(int sock, const char *arg)
 {
+	struct dbhandle *h;
 	struct record *rec = NULL;
+	int err = 0, timestamp = 0;
+	char *e;
 
-	if (send(sock, gdbh->db, sizeof(*gdbh->db), 0) != sizeof(*gdbh->db))
-		return -errno;
+	if (arg) {
+		timestamp = strtoul(arg, &e, 10);
 
-	while ((rec = database_next(gdbh, rec)) != NULL)
-		if (send(sock, rec, db_recsize, 0) != db_recsize)
-			return -errno;
+		if (arg == e || *e)
+			return -EINVAL;
+	}
 
-	return 0;
+	if (timestamp == 0) {
+		h = gdbh;
+	}
+	else {
+		h = database_init(&opt.archive_interval, false, 0);
+
+		if (!h) {
+			err = ENOMEM;
+			goto out;
+		}
+
+		err = database_load(h, opt.db.directory, timestamp);
+
+		if (err)
+			goto out;
+	}
+
+	if (send(sock, h->db, sizeof(*h->db), 0) != sizeof(*h->db)) {
+		err = errno;
+		goto out;
+	}
+
+	while ((rec = database_next(h, rec)) != NULL)
+		if (send(sock, rec, db_recsize, 0) != db_recsize) {
+			err = errno;
+			goto out;
+		}
+
+out:
+	if (h != gdbh)
+		database_free(h);
+
+	return -err;
 }
 
 static int
-handle_list(int sock)
+handle_list(int sock, const char *arg)
 {
 	int err;
 	int delta = 0;
@@ -67,8 +103,13 @@ handle_list(int sock)
 		timestamp = interval_timestamp(&opt.archive_interval, delta--);
 		err = database_load(NULL, opt.db.directory, timestamp);
 
-		if (err)
+		if (err) {
+			if (-err != ENOENT)
+				fprintf(stderr, "Corrupted database detected: %d (%s)\n",
+				        timestamp, strerror(-err));
+
 			break;
+		}
 
 		if (send(sock, &timestamp, sizeof(timestamp), 0) != sizeof(timestamp))
 			return -errno;
@@ -78,7 +119,7 @@ handle_list(int sock)
 }
 
 static int
-handle_commit(int sock)
+handle_commit(int sock, const char *arg)
 {
 	uint32_t timestamp = interval_timestamp(&opt.archive_interval, 0);
 	char buf[128];
@@ -121,21 +162,25 @@ handle_client_timeout(struct uloop_timeout *tm)
 static void
 handle_client_request(struct uloop_fd *ufd, unsigned int ev)
 {
-	char cmd[32] = { };
+	char *cmd, *arg, buf[32] = { };
 	size_t len;
 	int i, err;
 
-	len = recv(ufd->fd, cmd, sizeof(cmd) - 1, 0);
+	len = recv(ufd->fd, buf, sizeof(buf) - 1, 0);
 
-	if (len > 0)
+	if (len > 0) {
+		cmd = strtok(buf, " \t\n");
+		arg = strtok(NULL, " \t\n");
+
 		for (i = 0; i < sizeof(commands) / sizeof(commands[0]); i++)
 			if (!strcmp(commands[i].cmd, cmd)) {
-				err = commands[i].cb(ufd->fd);
+				err = commands[i].cb(ufd->fd, arg);
 				if (err) {
 					fprintf(stderr, "Unable to handle '%s' command: %s\n",
-					        cmd, strerror(-err));
+					        buf, strerror(-err));
 				}
 			}
+	}
 
 	handle_client_timeout(&sock_tm);
 }
