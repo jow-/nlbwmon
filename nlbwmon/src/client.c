@@ -90,9 +90,16 @@ static struct field fields[MAX] = {
 };
 
 
+static struct {
+	int timestamp;
+	bool plain_numbers;
+	int8_t group_by[1 + MAX];
+	int8_t order_by[1 + MAX];
+} client_opt;
+
 struct command {
 	const char *cmd;
-	int (*fn)(int timestamp, int8_t *group_by, int8_t *order_by);
+	int (*fn)(void);
 };
 
 
@@ -137,15 +144,17 @@ format_num(uint64_t n)
 
 	n = be64toh(n);
 
-	while (*unit) {
-		if (n > e) {
-			snprintf(buf, sizeof(buf), "%4"PRIu64".%02"PRIu64" %c",
-			         n / e, (n % e) * 100 / e, *unit);
-			return buf;
-		}
+	if (!client_opt.plain_numbers) {
+		while (*unit) {
+			if (n > e) {
+				snprintf(buf, sizeof(buf), "%4"PRIu64".%02"PRIu64" %c",
+				         n / e, (n % e) * 100 / e, *unit);
+				return buf;
+			}
 
-		unit++;
-		e /= 1024;
+			unit++;
+			e /= 1024;
+		}
 	}
 
 	snprintf(buf, sizeof(buf), "%8"PRIu64" ", n);
@@ -179,8 +188,7 @@ format_proto(uint8_t prnum)
 }
 
 static int
-recv_database(int timestamp, int8_t *group_by, int8_t *order_by,
-              struct dbhandle **h)
+recv_database(struct dbhandle **h)
 {
 	int i, len, err, ctrl_socket;
 	struct database db;
@@ -192,7 +200,7 @@ recv_database(int timestamp, int8_t *group_by, int8_t *order_by,
 	if (!ctrl_socket)
 		return -errno;
 
-	len = snprintf(req, sizeof(req), "dump %d", timestamp);
+	len = snprintf(req, sizeof(req), "dump %d", client_opt.timestamp);
 
 	if (send(ctrl_socket, req, len, 0) != len) {
 		close(ctrl_socket);
@@ -204,7 +212,7 @@ recv_database(int timestamp, int8_t *group_by, int8_t *order_by,
 		return -ENODATA;
 	}
 
-	*h = database_mem(cmp_fn, group_by);
+	*h = database_mem(cmp_fn, client_opt.group_by);
 
 	if (!*h) {
 		close(ctrl_socket);
@@ -225,14 +233,14 @@ recv_database(int timestamp, int8_t *group_by, int8_t *order_by,
 		}
 	}
 
-	database_reorder(*h, sort_fn, order_by);
+	database_reorder(*h, sort_fn, client_opt.order_by);
 
 	close(ctrl_socket);
 	return 0;
 }
 
 static int
-handle_show(int timestamp, int8_t *group_by, int8_t *order_by)
+handle_show(void)
 {
 	struct dbhandle *h = NULL;
 	struct record *rec = NULL;
@@ -241,13 +249,13 @@ handle_show(int timestamp, int8_t *group_by, int8_t *order_by)
 	int8_t i, r, n;
 	int err;
 
-	err = recv_database(timestamp, group_by, order_by, &h);
+	err = recv_database(&h);
 
 	if (err != 0)
 		return err;
 
-	for (i = 0; i < group_by[0]; i++)
-		columns[group_by[1 + i] - 1] = ' ';
+	for (i = 0; i < client_opt.group_by[0]; i++)
+		columns[client_opt.group_by[1 + i] - 1] = ' ';
 
 	columns[CONNS]    = ' ';
 	columns[RX_BYTES] = ' ';
@@ -255,9 +263,9 @@ handle_show(int timestamp, int8_t *group_by, int8_t *order_by)
 	columns[TX_BYTES] = ' ';
 	columns[TX_PKTS]  = ' ';
 
-	for (i = 0; i < order_by[0]; i++) {
-		r = (order_by[1 + i] < 0);
-		n = (r ? -order_by[1 + i] : order_by[1 + i]) - 1;
+	for (i = 0; i < client_opt.order_by[0]; i++) {
+		r = (client_opt.order_by[1 + i] < 0);
+		n = (r ? -client_opt.order_by[1 + i] : client_opt.order_by[1 + i]) - 1;
 		columns[n] = r ? '>' : '<';
 	}
 
@@ -335,7 +343,7 @@ handle_show(int timestamp, int8_t *group_by, int8_t *order_by)
 }
 
 static int
-handle_json(int timestamp, int8_t *group_by, int8_t *order_by)
+handle_json(void)
 {
 	struct dbhandle *h = NULL;
 	struct record *rec = NULL;
@@ -344,13 +352,13 @@ handle_json(int timestamp, int8_t *group_by, int8_t *order_by)
 	int8_t i, r, n;
 	int err;
 
-	err = recv_database(timestamp, group_by, order_by, &h);
+	err = recv_database(&h);
 
 	if (err != 0)
 		return err;
 
-	for (i = 0; i < group_by[0]; i++)
-		columns[group_by[1 + i] - 1] = 1;
+	for (i = 0; i < client_opt.group_by[0]; i++)
+		columns[client_opt.group_by[1 + i] - 1] = 1;
 
 	if (columns[HOST]) {
 		columns[IP] = columns[MAC] = 1;
@@ -459,7 +467,7 @@ handle_json(int timestamp, int8_t *group_by, int8_t *order_by)
 }
 
 static int
-handle_list(int timestamp, int8_t *group_by, int8_t *order_by)
+handle_list(void)
 {
 	int ctrl_socket;
 
@@ -474,11 +482,14 @@ handle_list(int timestamp, int8_t *group_by, int8_t *order_by)
 	}
 
 	while (true) {
-		if (recv(ctrl_socket, &timestamp, sizeof(timestamp), 0) <= 0)
+		if (recv(ctrl_socket, &client_opt.timestamp,
+		         sizeof(client_opt.timestamp), 0) <= 0)
 			break;
 
 		printf("%04d-%02d-%02d\n",
-		       timestamp / 10000, timestamp % 10000 / 100, timestamp % 100);
+		       client_opt.timestamp / 10000,
+		       client_opt.timestamp % 10000 / 100,
+		       client_opt.timestamp % 100);
 	}
 
 	close(ctrl_socket);
@@ -487,7 +498,7 @@ handle_list(int timestamp, int8_t *group_by, int8_t *order_by)
 }
 
 static int
-handle_commit(int timestamp, int8_t *group_by, int8_t *order_by)
+handle_commit(void)
 {
 	char reply[128] = { };
 	int ctrl_socket;
@@ -524,14 +535,12 @@ static struct command commands[] = {
 int
 client_main(int argc, char **argv)
 {
-	int8_t group_by[1 + MAX] = { }, order_by[1 + MAX] = { };
 	struct command *cmd = NULL;
 	int i, f, err, optchr;
-	int timestamp = 0;
 	unsigned int year, month, day;
 	char c, *p;
 
-	while ((optchr = getopt(argc, argv, "c:p:S:g:o:t:")) > -1) {
+	while ((optchr = getopt(argc, argv, "c:p:S:g:o:t:n")) > -1) {
 		switch (optchr) {
 		case 'S':
 			opt.socket = optarg;
@@ -590,9 +599,9 @@ client_main(int argc, char **argv)
 				}
 
 				if (optchr == 'g')
-					group_by[++(group_by[0])] = f;
+					client_opt.group_by[++(client_opt.group_by[0])] = f;
 				else
-					order_by[++(order_by[0])] = f;
+					client_opt.order_by[++(client_opt.order_by[0])] = f;
 
 				if (c == '\0')
 					break;
@@ -608,23 +617,27 @@ client_main(int argc, char **argv)
 				return 1;
 			}
 
-			timestamp = year * 10000 + month * 100 + day;
+			client_opt.timestamp = year * 10000 + month * 100 + day;
+			break;
+
+		case 'n':
+			client_opt.plain_numbers = 1;
 			break;
 		}
 	}
 
-	if (!group_by[0]) {
-		group_by[0] = 3;
-		group_by[1] = FAMILY + 1;
-		group_by[2] = HOST   + 1;
-		group_by[3] = LAYER7 + 1;
+	if (!client_opt.group_by[0]) {
+		client_opt.group_by[0] = 3;
+		client_opt.group_by[1] = FAMILY + 1;
+		client_opt.group_by[2] = HOST   + 1;
+		client_opt.group_by[3] = LAYER7 + 1;
 
 	}
 
-	if (!order_by[0]) {
-		order_by[0] = 2;
-		order_by[1] = -RX_BYTES - 1;
-		order_by[2] = -RX_PKTS  - 1;
+	if (!client_opt.order_by[0]) {
+		client_opt.order_by[0] = 2;
+		client_opt.order_by[1] = -RX_BYTES - 1;
+		client_opt.order_by[2] = -RX_PKTS  - 1;
 	}
 
 	if (!cmd) {
@@ -640,7 +653,7 @@ client_main(int argc, char **argv)
 		return 1;
 	}
 
-	err = cmd->fn(timestamp, group_by, order_by);
+	err = cmd->fn();
 
 	if (err) {
 		fprintf(stderr, "Error while processing command: %s\n",
