@@ -95,7 +95,14 @@ static struct {
 	bool plain_numbers;
 	int8_t group_by[1 + MAX];
 	int8_t order_by[1 + MAX];
-} client_opt;
+	char separator;
+	char escape;
+	char quote;
+} client_opt = {
+	.separator = '\t',
+	.escape = '"',
+	.quote = '"',
+};
 
 struct command {
 	const char *cmd;
@@ -185,6 +192,23 @@ format_proto(uint8_t prnum)
 	endprotoent();
 
 	return prstr;
+}
+
+static void
+print_csv_str(const char *str)
+{
+	if (client_opt.quote)
+		putchar(client_opt.quote);
+
+	while (*str) {
+		if (*str == client_opt.escape)
+			putchar(client_opt.escape);
+
+		putchar(*str++);
+	}
+
+	if (client_opt.quote)
+		putchar(client_opt.quote);
 }
 
 static int
@@ -467,6 +491,117 @@ handle_json(void)
 }
 
 static int
+handle_csv(void)
+{
+	struct dbhandle *h = NULL;
+	struct record *rec = NULL;
+	char columns[MAX] = { };
+	struct protocol *pr;
+	int8_t i, r, n;
+	int err;
+
+	err = recv_database(&h);
+
+	if (err != 0)
+		return err;
+
+	for (i = 0; i < client_opt.group_by[0]; i++)
+		columns[client_opt.group_by[1 + i] - 1] = 1;
+
+	if (columns[HOST]) {
+		columns[IP] = columns[MAC] = 1;
+		columns[HOST] = 0;
+	}
+
+	if (columns[LAYER7]) {
+		columns[PROTO] = columns[PORT] = 1;
+	}
+
+	columns[CONNS]    = 1;
+	columns[RX_BYTES] = 1;
+	columns[RX_PKTS]  = 1;
+	columns[TX_BYTES] = 1;
+	columns[TX_PKTS]  = 1;
+
+	for (i = 0, n = 0, r = 0; i < MAX; i++) {
+		if (!columns[i])
+			continue;
+
+		if (n++)
+			putchar(client_opt.separator);
+
+		print_csv_str(fields[i].name);
+	}
+
+	putchar('\n');
+
+	while ((rec = database_next(h, rec)) != NULL) {
+		for (i = 0, n = 0; i < MAX; i++) {
+			if (!columns[i])
+				continue;
+
+			if (n++)
+				putchar(client_opt.separator);
+
+			switch (i)
+			{
+			case FAMILY:
+				printf("%"PRIu8, rec->family == AF_INET ? 4 : 6);
+				break;
+
+			case PROTO:
+				print_csv_str(format_proto(rec->proto));
+				break;
+
+			case PORT:
+				printf("%"PRIu16, be16toh(rec->dst_port));
+				break;
+
+			case LAYER7:
+				pr = lookup_protocol(rec->proto, be16toh(rec->dst_port));
+				if (pr)
+					print_csv_str(pr->name);
+				break;
+
+			case MAC:
+				print_csv_str(format_macaddr(&rec->src_mac.ea));
+				break;
+
+			case IP:
+				print_csv_str(format_ipaddr(rec->family, &rec->src_addr));
+				break;
+
+			case CONNS:
+				printf("%"PRIu64, be64toh(rec->count));
+				break;
+
+			case RX_BYTES:
+				printf("%"PRIu64, be64toh(rec->in_bytes));
+				break;
+
+			case RX_PKTS:
+				printf("%"PRIu64, be64toh(rec->in_pkts));
+				break;
+
+			case TX_BYTES:
+				printf("%"PRIu64, be64toh(rec->out_bytes));
+				break;
+
+			case TX_PKTS:
+				printf("%"PRIu64, be64toh(rec->out_pkts));
+				break;
+			}
+		}
+
+		putchar('\n');
+	}
+
+	database_free(h);
+
+	return 0;
+}
+
+static int
 handle_list(void)
 {
 	int ctrl_socket;
@@ -527,6 +662,7 @@ handle_commit(void)
 static struct command commands[] = {
 	{ "show", handle_show },
 	{ "json", handle_json },
+	{ "csv", handle_csv },
 	{ "list", handle_list },
 	{ "commit", handle_commit },
 };
@@ -540,7 +676,7 @@ client_main(int argc, char **argv)
 	unsigned int year, month, day;
 	char c, *p;
 
-	while ((optchr = getopt(argc, argv, "c:p:S:g:o:t:n")) > -1) {
+	while ((optchr = getopt(argc, argv, "c:p:S:g:o:t:s::q::e::n")) > -1) {
 		switch (optchr) {
 		case 'S':
 			opt.socket = optarg;
@@ -622,6 +758,18 @@ client_main(int argc, char **argv)
 
 		case 'n':
 			client_opt.plain_numbers = 1;
+			break;
+
+		case 's':
+			client_opt.separator = optarg ? *optarg : 0;
+			break;
+
+		case 'q':
+			client_opt.quote = optarg ? *optarg : 0;
+			break;
+
+		case 'e':
+			client_opt.escape = optarg ? *optarg : 0;
 			break;
 		}
 	}
