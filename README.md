@@ -6,7 +6,11 @@ nlbwmon can be used on a linux router to monitor bandwidth used by network hosts
 
 nlbwmon uses a netlink socket to pull usage information from the linux kernel.  nlbwmon collects statistic information from linux conntrack entries.  This method is quite efficient compared to other methods of monitoring bandwidth usage.
 
-Each time stats are pulled from the conntrack entries, their counters are reset (zero-on-read).  When a conntrack entry is destroyed, nlbwmon is notified by the kernel, and stats are collected from that entry before it is deleted.
+Each time the conntrack entries are polled, their counters are reset (zero-on-read).  When a conntrack entry is destroyed, nlbwmon is notified by the kernel, and stats are collected from that entry before it is deleted.
+
+## Usage
+
+
 
 ## Use this repository as a package feed:
 
@@ -16,6 +20,8 @@ You can easily build nlbwmon from lede/openwrt by including this repository in y
     echo "src-git nlbwmon https://github.com/jow-/nlbwmon.git" >> feeds.conf
     ./scripts/feeds update nlbwmon
     ./scripts/feeds install nlbwmon
+
+## Examples
 
 Once the package is installed, use the "nlbw" command to dump gathered values:
 
