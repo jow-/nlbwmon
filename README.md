@@ -37,7 +37,7 @@ Each time the conntrack entries are polled, their counters are reset (zero-on-re
 <dd>Accounting period interval.  May be either in the format YYYY-MM-DD/NN
 to start a new accounting period exactly every NN days, beginning at
 the given date, or a number specifiying the day of month at which to
-start the next accounting period.</dd>
+start the next accounting period.  For example:</dd>
 </dl>
 
 ```
@@ -47,10 +47,16 @@ start the next accounting period.</dd>
 ```
 
 <dl>
-<dd></dd>
+<dt>-P</dt>
+<dd>Whether to preallocate the maximum possible database size in memory.
+This is mainly useful for memory constrained systems which might not
+be able to satisfy memory allocation after longer uptime periods.
+Only effective in conjunction with database_limit, ignored otherwise.</dd>
 
-<dt></dt>
-<dd></dd>
+<dt>-Z</dt>
+<dd>Whether to gzip compress archive databases. Compressing the database
+files makes accessing old data slightly slower but helps to reduce
+storage requirements.</dd>
 
 <dt></dt>
 <dd></dd>
