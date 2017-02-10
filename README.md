@@ -2,9 +2,15 @@
 
 ## Description
 
-nlbwmon is a bandwidth monitoring daemon which uses a netlink socket to pull usage information from the linux kernel.  
+nlbwmon can be used on a linux router to monitor bandwidth used by network hosts.  Network statistics are collected and stored in a database.  The client utility (nlbw) can query the daemon for current statistics.  
 
-Use this repository as a package feed:
+nlbwmon uses a netlink socket to pull usage information from the linux kernel.  nlbwmon collects statistic information from linux conntrack entries.  This method is quite efficient compared to other methods of monitoring bandwidth usage.
+
+Each time stats are pulled from the conntrack entries, their counters are reset (zero-on-read).  When a conntrack entry is destroyed, nlbwmon is notified by the kernel, and stats are collected from that entry before it is deleted.
+
+## Use this repository as a package feed:
+
+You can easily build nlbwmon from lede/openwrt by including this repository in your build environment:
 
     cp feeds.conf.default feeds.conf
     echo "src-git nlbwmon https://github.com/jow-/nlbwmon.git" >> feeds.conf
