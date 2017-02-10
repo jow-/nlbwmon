@@ -115,7 +115,7 @@ Output stats in CSV format.
 List available databases.  Select a database to read from, and specify it with the -t option.
 
 #### commit
-Write data stored in memory to database file.
+Write data stored in memory to database file.  Use just before a reboot for example.
 
 ## Use this repository as a package feed:
 
