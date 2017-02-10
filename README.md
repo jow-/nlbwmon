@@ -22,10 +22,10 @@ Each time the conntrack entries are polled, their counters are reset (zero-on-re
 <dd>Interval used to poll the conntrack entries.</dd>
 
 <dt>-s [network]</dt>
-<dd>Specify network subnet to monitor</dd>
+<dd>Specify network subnet to monitor.</dd>
 
 <dt>-o [path-to-database-file]</dt>
-<dd>Storage directory for the database files</dd>
+<dd>Storage directory for the database files.</dd>
 
 <dt>-p [path-to-procol-database]</dt>
 <dd>Protocol description file, used to distinguish traffic streams by IP protocol number and port.</dd>
@@ -57,14 +57,42 @@ Only effective in conjunction with database_limit, ignored otherwise.</dd>
 <dd>Whether to gzip compress archive databases. Compressing the database
 files makes accessing old data slightly slower but helps to reduce
 storage requirements.</dd>
-
-<dt></dt>
-<dd></dd>
-
-
 </dl>
 
+### nlbw
+*NOTE: See the examples below to get started quickly.
 
+<dl>
+<dt>-S</dt>
+<dd></dd>
+
+<dt>-c</dt>
+<dd>Specify a command.  Current commands are: show, json, csv, list, commit</dd>
+
+<dt>-p [path-to-procol-database]</dt>
+<dd>Protocol description file, used to distinguish traffic streams by IP protocol number and port.</dd>
+
+<dt>-g</dt>
+<dd>Group output by the specified column.  Prefix with a - to invert order.</dd>
+
+<dt>-o</dt>
+<dd>Order output by the specified column.  Prefix with a - to invert order.</dd>
+
+<dt>-t</dt>
+<dd></dd>
+
+<dt>-n</dt>
+<dd>Use plain numbers, dont divide to get K, M, G, etc...</dd>
+
+<dt>-s [char]</dt>
+<dd>Specify the column separator when using CSV format.</dd>
+
+<dt>-q [char]</dt>
+<dd>Specify the quote character when using CSV format.</dd>
+
+<dt>-e [char]</dt>
+<dd>Specify the escape character when using CSV format.</dd>
+</dl>
 
 
 ## Use this repository as a package feed:
