@@ -8,6 +8,8 @@ nlbwmon uses a netlink socket to pull usage information from the linux kernel.  
 
 Each time the conntrack entries are polled, their counters are reset (zero-on-read).  When a conntrack entry is destroyed, nlbwmon is notified by the kernel, and stats are collected from that entry before it is deleted.
 
+
+
 ## Usage
 
 ### nlbwmon
@@ -60,6 +62,7 @@ storage requirements.</dd>
 </dl>
 
 
+
 ### nlbw
 *NOTE: See the examples below to get started quickly.*
 
@@ -95,6 +98,8 @@ storage requirements.</dd>
 <dd>Specify the escape character when using CSV format.</dd>
 </dl>
 
+
+
 ### Commands available for nlbw:
 
 #### show
@@ -120,6 +125,8 @@ You can easily build nlbwmon from lede by including this repository in your buil
     echo "src-git nlbwmon https://github.com/jow-/nlbwmon.git" >> feeds.conf
     ./scripts/feeds update nlbwmon
     ./scripts/feeds install nlbwmon
+
+
 
 ## Examples
 
