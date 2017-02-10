@@ -4,14 +4,15 @@
 
 nlbwmon can be used on a linux router to monitor bandwidth used by network hosts.  Network statistics are collected and stored in a database.  The client utility (nlbw) can query the daemon for current statistics.  
 
-nlbwmon uses a netlink socket to pull usage information from the linux kernel.  nlbwmon collects statistic information from linux conntrack entries.  This method is quite efficient compared to other methods of monitoring bandwidth usage.
-
-Each time the conntrack entries are polled, their counters are reset (zero-on-read).  When a conntrack entry is destroyed, nlbwmon is notified by the kernel, and stats are collected from that entry before it is deleted.
+By default, nlbwmon tracks bandwidth used over a one month interval, starting on the first of the month.  A database is kept for each interval, up to 10 by default, after that the oldest one is deleted.
 
 nlbwmon tracks traffic by IP Version (ipv4/ipv6), by IP Address, by MAC address, and by layer7 protocol (ie, port numbers).  All tracking information is kept in the database.  The default protocol file contains approximately 45 port definitions.  The user can add/remove ports to this file as necessary.  Any traffic that doesn't match a port definition is classified as 'Other'.  
 
 *NOTE: If the user is not interested in layer7 protocol information, removing all protcools from the protocol file will classify all traffic into 'other', vastly reducing the database size.*
 
+nlbwmon uses a netlink socket to pull usage information from the linux kernel.  nlbwmon collects statistic information from linux conntrack entries.  This method is quite efficient compared to other methods of monitoring bandwidth usage.
+
+Each time the conntrack entries are polled, their counters are reset (zero-on-read).  When a conntrack entry is destroyed, nlbwmon is notified by the kernel, and stats are collected from that entry before it is deleted.
 
 
 ## Usage
@@ -37,10 +38,10 @@ nlbwmon tracks traffic by IP Version (ipv4/ipv6), by IP Address, by MAC address,
 <dd>Protocol description file, used to distinguish traffic streams by IP protocol number and port.</dd>
 
 <dt>-G count</dt>
-<dd>Number of database generations to retain.  After the limit is reached, the oldest database files are deleted.</dd>
+<dd>Number of database generations to retain.  After the limit is reached, the oldest database files are deleted.  The default is 10.</dd>
 
 <dt>-I interval</dt>
-<dd>Accounting period interval.  May be either in the format YYYY-MM-DD/NN
+<dd>Accounting period interval.  May be either in the format YYYY-MM-DD/NN,
 to start a new accounting period exactly every NN days, beginning at
 the given date, or a number specifiying the day of month at which to
 start the next accounting period.  For example:</dd>
