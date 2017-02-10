@@ -68,7 +68,7 @@ storage requirements.</dd>
 
 <dl>
 <dt>-S /path/to/domain.socket</dt>
-<dd>Path to unix domain socket.  Default is /var/run/nlbwmon.sock</dd>
+<dd>Path to unix domain socket.  Default is /var/run/nlbwmon.sock.  This should not be required unless the daemon was instructed to use another socket path for some reason.</dd>
 
 <dt>-c</dt>
 <dd>Specify a command.  Current commands are: show, json, csv, list, commit</dd>
