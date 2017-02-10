@@ -61,7 +61,7 @@ storage requirements.</dd>
 
 
 ### nlbw
-*NOTE: See the examples below to get started quickly.
+*NOTE: See the examples below to get started quickly.*
 
 <dl>
 <dt>-S</dt>
@@ -80,7 +80,7 @@ storage requirements.</dd>
 <dd>Order output by the specified column.  Prefix with a - to invert order.</dd>
 
 <dt>-t</dt>
-<dd></dd>
+<dd>When listing records, specify a day to retreive, in the format YYYY-MM-DD</dd>
 
 <dt>-n</dt>
 <dd>Use plain numbers, dont divide to get K, M, G, etc...</dd>
