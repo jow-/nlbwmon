@@ -14,7 +14,7 @@ Each time the conntrack entries are polled, their counters are reset (zero-on-re
 
 ### nlbwmon
 
-*NOTE: an init script and config file is provided for lede, allowing these settings to be configured via uci.  Just take a look at /etc/config/nlbwmon.*
+*NOTE: an init script and config file is provided for lede, allowing these settings to be configured via uci or via /etc/config.  Just take a look at /etc/config/nlbwmon.*
 
 <dl>
 <dt>-i sec</dt>
