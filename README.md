@@ -80,7 +80,7 @@ storage requirements.</dd>
 <dd>Order output by the specified column.  Prefix with a - to invert order.</dd>
 
 <dt>-t</dt>
-<dd>When listing records, specify a day to retreive, in the format YYYY-MM-DD</dd>
+<dd>Lookup data in the specified database, in the format YYYY-MM-DD</dd>
 
 <dt>-n</dt>
 <dd>Use plain numbers, dont divide to get K, M, G, etc.</dd>
@@ -98,14 +98,19 @@ storage requirements.</dd>
 ### Commands available for nlbw:
 
 #### show
+Output stats in human readable format.
 
 #### json
+Output stats in JSON format.
 
 #### csv
+Output stats in CSV format.
 
 #### list
+List available databases.  Select a database to read from, and specify it with the -t option.
 
 #### commit
+Write data stored in memory to database file.
 
 ## Use this repository as a package feed:
 
