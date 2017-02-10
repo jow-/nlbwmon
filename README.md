@@ -17,25 +17,25 @@ Each time the conntrack entries are polled, their counters are reset (zero-on-re
 *NOTE: an init script and config file is provided for lede, allowing these settings to be configured via uci.  Just take a look at /etc/config/nlbwmon.*
 
 <dl>
-<dt>-i [sec]</dt>
+<dt>-i sec</dt>
 <dd>Interval used to save in-memory database to file.</dd>
 
-<dt>-r [sec]</dt>
+<dt>-r sec</dt>
 <dd>Interval used to poll the conntrack entries.</dd>
 
-<dt>-s [network]</dt>
+<dt>-s network</dt>
 <dd>Specify network subnet to monitor.</dd>
 
-<dt>-o [path-to-database-file]</dt>
+<dt>-o path-to-database-file</dt>
 <dd>Storage directory for the database files.</dd>
 
-<dt>-p [path-to-procol-database]</dt>
+<dt>-p path-to-procol-database</dt>
 <dd>Protocol description file, used to distinguish traffic streams by IP protocol number and port.</dd>
 
-<dt>-G [count]</dt>
+<dt>-G count</dt>
 <dd>Number of database generations to retain.  After the limit is reached, the oldest database files are deleted.</dd>
 
-<dt>-I [interval]</dt>
+<dt>-I interval</dt>
 <dd>Accounting period interval.  May be either in the format YYYY-MM-DD/NN
 to start a new accounting period exactly every NN days, beginning at
 the given date, or a number specifiying the day of month at which to
@@ -73,28 +73,28 @@ storage requirements.</dd>
 <dt>-c</dt>
 <dd>Specify a command.  Current commands are: show, json, csv, list, commit</dd>
 
-<dt>-p [path-to-procol-database]</dt>
+<dt>-p path-to-procol-database</dt>
 <dd>Protocol description file, used to distinguish traffic streams by IP protocol number and port.</dd>
 
-<dt>-g</dt>
+<dt>-g col[,col]</dt>
 <dd>Group output by the specified column.  Prefix with a - to invert order.</dd>
 
-<dt>-o</dt>
+<dt>-o col[,col]</dt>
 <dd>Order output by the specified column.  Prefix with a - to invert order.</dd>
 
-<dt>-t</dt>
+<dt>-t YYYY-MM-DD</dt>
 <dd>Lookup data in the specified database, in the format YYYY-MM-DD</dd>
 
 <dt>-n</dt>
 <dd>Use plain numbers, dont divide to get K, M, G, etc.</dd>
 
-<dt>-s [char]</dt>
+<dt>-s char</dt>
 <dd>Specify the column separator when using CSV format.</dd>
 
-<dt>-q [char]</dt>
+<dt>-q char</dt>
 <dd>Specify the quote character when using CSV format.</dd>
 
-<dt>-e [char]</dt>
+<dt>-e char</dt>
 <dd>Specify the escape character when using CSV format.</dd>
 </dl>
 
