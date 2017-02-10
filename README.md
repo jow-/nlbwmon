@@ -77,10 +77,10 @@ storage requirements.</dd>
 <dd>Protocol description file, used to distinguish traffic streams by IP protocol number and port.</dd>
 
 <dt>-g col[,col]</dt>
-<dd>Group output by the specified column.  Prefix with a - to invert order.</dd>
+<dd>Group output by the specified column.  Prefix column with a - to invert order.</dd>
 
 <dt>-o col[,col]</dt>
-<dd>Order output by the specified column.  Prefix with a - to invert order.</dd>
+<dd>Order output by the specified column.  Prefix column with a - to invert order.</dd>
 
 <dt>-t YYYY-MM-DD</dt>
 <dd>Lookup data in the specified database, in the format YYYY-MM-DD</dd>
