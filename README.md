@@ -70,8 +70,8 @@ storage requirements.</dd>
 <dt>-S /path/to/domain.socket</dt>
 <dd>Path to unix domain socket.  Default is /var/run/nlbwmon.sock.  This should not be required unless the daemon was instructed to use another socket path for some reason.</dd>
 
-<dt>-c</dt>
-<dd>Specify a command.  Current commands are: show, json, csv, list, commit</dd>
+<dt>-c command</dt>
+<dd>Specify a command.  Current commands are: show, json, csv, list, commit.  See below for more information about commands.</dd>
 
 <dt>-p /path/to/procol-database</dt>
 <dd>Protocol description file, used to distinguish traffic streams by IP protocol number and port.</dd>
