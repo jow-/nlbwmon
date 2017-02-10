@@ -12,10 +12,9 @@ Each time the conntrack entries are polled, their counters are reset (zero-on-re
 
 ### nlbwmon
 
-NOTE: an init script and config file is provided for lede, allowing these settings to be configured via uci.  Just take a look at /etc/config/nlbwmon.
+*NOTE: an init script and config file is provided for lede, allowing these settings to be configured via uci.  Just take a look at /etc/config/nlbwmon.*
 
 <dl>
-
 <dt>-i [sec]</dt>
 <dd>Interval used to save in-memory database to file.</dd>
 
@@ -31,10 +30,23 @@ NOTE: an init script and config file is provided for lede, allowing these settin
 <dt>-p [path-to-procol-database]</dt>
 <dd>Protocol description file, used to distinguish traffic streams by IP protocol number and port.</dd>
 
-<dt></dt>
-<dd></dd>
+<dt>-G [count]</dt>
+<dd>Number of database generations to retain.  After the limit is reached, the oldest database files are deleted.</dd>
 
-<dt></dt>
+<dt>-I [interval]</dt>
+<dd>Accounting period interval.  May be either in the format YYYY-MM-DD/NN
+to start a new accounting period exactly every NN days, beginning at
+the given date, or a number specifiying the day of month at which to
+start the next accounting period.</dd>
+</dl>
+
+```
+2017-01-17/14   # every 14 days, starting Jan 17, 2017
+-2              # second last day of month, e.g. 30th in March
+1               # first day of the month (default)
+```
+
+<dl>
 <dd></dd>
 
 <dt></dt>
