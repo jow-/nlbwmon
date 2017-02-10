@@ -12,7 +12,28 @@ Each time the conntrack entries are polled, their counters are reset (zero-on-re
 
 ### nlbwmon
 
-NOTE: an init script is provided for lede which starts the nlbwmon daemon automatically with reasonable defaults.
+NOTE: an init script and config file is provided for lede, allowing these settings to be configured via uci.  Just take a look at /etc/config/nlbwmon.
+
+i
+:
+-r [sec]
+:  Interval used to poll the conntrack entries.
+s
+:
+o
+:
+p
+:
+G
+:
+I
+:
+L
+:
+PZ
+
+
+
 
 
 ## Use this repository as a package feed:
