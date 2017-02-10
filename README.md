@@ -176,6 +176,15 @@ Prefix order field names with dash to invert order:
     a0:99:9b:94:59:06         9     49.70 KB (      88 )    18.59 KB (     106 )
     00:00:00:00:00:00         2          0 B (       0 )         0 B (       0 )
 
+Machine readable output, should work well with rrdcollect:
+
+	$ nlbw -c csv -g mac -o mac -q
+	mac     conns   rx_bytes        rx_pkts tx_bytes        tx_pkts
+	00:00:00:00:00:00       411     72968   751     61428   767
+	34:02:86:17:5e:03       598     239950465       171095  5715237 86155
+	ac:37:43:a1:2d:47       125     284027227       205678  6451867 107297
+
+
 Use the json query to dump the raw database values in JSON format:
 
     root@jj:~# nlbw -c json
