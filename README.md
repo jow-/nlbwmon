@@ -1,5 +1,9 @@
 # nlbwmon - Simple conntrack netlink based traffic accounting
 
+## Description
+
+nlbwmon is a bandwidth monitoring daemon which uses a netlink socket to pull usage information from the linux kernel.  
+
 Use this repository as a package feed:
 
     cp feeds.conf.default feeds.conf
