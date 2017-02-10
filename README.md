@@ -83,7 +83,7 @@ storage requirements.</dd>
 <dd>Order output by the specified column.  Prefix column with a - to invert order.</dd>
 
 <dt>-t YYYY-MM-DD</dt>
-<dd>Lookup data in the specified database, in the format YYYY-MM-DD.  Use the list command to view available databases.</dd>
+<dd>Read data from the specified database, instead of the active database.  Use the list command to view available databases.</dd>
 
 <dt>-n</dt>
 <dd>Use plain numbers, dont divide to get K, M, G, etc.</dd>
