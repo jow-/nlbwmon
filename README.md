@@ -89,13 +89,13 @@ storage requirements.</dd>
 <dd>Use plain numbers, dont divide to get K, M, G, etc.</dd>
 
 <dt>-s char</dt>
-<dd>Specify the column separator when using CSV format.</dd>
+<dd>Specify the separator character when using CSV format.  If no argument is provided, an empty string is assumed.  Currently only applies to CSV format.</dd>
 
 <dt>-q char</dt>
-<dd>Specify the quote character when using CSV format.</dd>
+<dd>Specify the quote character when using CSV format.  If no argument is provided, an empty string is assumed.  Currently only applies to CSV format.</dd>
 
 <dt>-e char</dt>
-<dd>Specify the escape character when using CSV format.</dd>
+<dd>Specify the escape character when using CSV format.  If no argument is provided, an empty string is assumed.  Currently only applies to CSV format.</dd>
 </dl>
 
 
