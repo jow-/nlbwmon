@@ -10,11 +10,14 @@ Each time the conntrack entries are polled, their counters are reset (zero-on-re
 
 ## Usage
 
+### nlbwmon
+
+NOTE: an init script is provided for lede which starts the nlbwmon daemon automatically with reasonable defaults.
 
 
 ## Use this repository as a package feed:
 
-You can easily build nlbwmon from lede/openwrt by including this repository in your build environment:
+You can easily build nlbwmon from lede by including this repository in your build environment:
 
     cp feeds.conf.default feeds.conf
     echo "src-git nlbwmon https://github.com/jow-/nlbwmon.git" >> feeds.conf
