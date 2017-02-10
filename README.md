@@ -8,6 +8,10 @@ nlbwmon uses a netlink socket to pull usage information from the linux kernel.  
 
 Each time the conntrack entries are polled, their counters are reset (zero-on-read).  When a conntrack entry is destroyed, nlbwmon is notified by the kernel, and stats are collected from that entry before it is deleted.
 
+nlbwmon tracks traffic by IP Version (ipv4/ipv6), by IP Address, by MAC address, and by layer7 protocol (ie, port numbers).  All tracking information is kept in the database.  The default protocol file contains approximately 45 port definitions.  The user can add/remove ports to this file as necessary.  Any traffic that doesn't match a port definition is classified as 'Other'.  
+
+*NOTE: If the user is not interested in layer7 protocol information, removing all protcools from the protocol file will classify all traffic into 'other', vastly reducing the database size.*
+
 
 
 ## Usage
@@ -29,7 +33,7 @@ Each time the conntrack entries are polled, their counters are reset (zero-on-re
 <dt>-o /path/to/database-folder</dt>
 <dd>Storage directory for the database files.</dd>
 
-<dt>-p /path/to/protocol-database</dt>
+<dt>-p /path/to/protocol-file</dt>
 <dd>Protocol description file, used to distinguish traffic streams by IP protocol number and port.</dd>
 
 <dt>-G count</dt>
