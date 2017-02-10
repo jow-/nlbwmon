@@ -44,7 +44,7 @@ start the next accounting period.  For example:</dd>
 
 ```
 2017-01-17/14   # every 14 days, starting Jan 17, 2017
--2              # second last day of month, e.g. 30th in March
+-2              # second to the last day of the month, e.g. 30th in March
 1               # first day of the month (default)
 ```
 
