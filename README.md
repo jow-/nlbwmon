@@ -83,7 +83,7 @@ storage requirements.</dd>
 <dd>When listing records, specify a day to retreive, in the format YYYY-MM-DD</dd>
 
 <dt>-n</dt>
-<dd>Use plain numbers, dont divide to get K, M, G, etc...</dd>
+<dd>Use plain numbers, dont divide to get K, M, G, etc.</dd>
 
 <dt>-s [char]</dt>
 <dd>Specify the column separator when using CSV format.</dd>
@@ -95,6 +95,17 @@ storage requirements.</dd>
 <dd>Specify the escape character when using CSV format.</dd>
 </dl>
 
+### Commands available for nlbw:
+
+#### show
+
+#### json
+
+#### csv
+
+#### list
+
+#### commit
 
 ## Use this repository as a package feed:
 
