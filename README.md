@@ -26,10 +26,10 @@ Each time the conntrack entries are polled, their counters are reset (zero-on-re
 <dt>-s network</dt>
 <dd>Specify network subnet to monitor.</dd>
 
-<dt>-o path-to-database-file</dt>
+<dt>-o /path/to/database-folder</dt>
 <dd>Storage directory for the database files.</dd>
 
-<dt>-p path-to-procol-database</dt>
+<dt>-p /path/to/protocol-database</dt>
 <dd>Protocol description file, used to distinguish traffic streams by IP protocol number and port.</dd>
 
 <dt>-G count</dt>
@@ -67,8 +67,8 @@ storage requirements.</dd>
 *NOTE: See the examples below to get started quickly.*
 
 <dl>
-<dt>-S</dt>
-<dd></dd>
+<dt>-S /path/to/domain.socket</dt>
+<dd>Path to unix domain socket.  Default is /var/run/nlbwmon.sock</dd>
 
 <dt>-c</dt>
 <dd>Specify a command.  Current commands are: show, json, csv, list, commit</dd>
