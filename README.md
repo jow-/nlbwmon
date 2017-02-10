@@ -1,11 +1,139 @@
 # nlbwmon - Simple conntrack netlink based traffic accounting
 
-Use this repository as a package feed:
+## Description
+
+nlbwmon can be used on a linux router to monitor bandwidth used by network hosts.  Network statistics are collected and stored in a database.  The client utility (nlbw) can query the daemon for current statistics.  
+
+By default, nlbwmon tracks bandwidth used over a one month interval, starting on the first of the month.  A database is kept for each interval, up to 10 by default, after that the oldest one is deleted.
+
+nlbwmon tracks traffic by IP Version (ipv4/ipv6), by IP Address, by MAC address, and by layer7 protocol (ie, port numbers).  All tracking information is kept in the database.  The default protocol file contains approximately 45 port definitions.  The user can add/remove ports to this file as necessary.  Any traffic that doesn't match a port definition is classified as 'Other'.  
+
+*NOTE: If the user is not interested in layer7 protocol information, removing all protcools from the protocol file will classify all traffic into 'other', vastly reducing the database size.*
+
+nlbwmon uses a netlink socket to pull usage information from the linux kernel.  nlbwmon collects statistic information from linux conntrack entries.  This method is quite efficient compared to other methods of monitoring bandwidth usage.
+
+Each time the conntrack entries are polled, their counters are reset (zero-on-read).  When a conntrack entry is destroyed, nlbwmon is notified by the kernel, and stats are collected from that entry before it is deleted.
+
+
+## Usage
+
+### nlbwmon
+
+*NOTE: an init script and config file is provided for lede, allowing these settings to be configured via uci or via /etc/config.  Just take a look at /etc/config/nlbwmon.*
+
+<dl>
+<dt>-i sec</dt>
+<dd>Interval used to save in-memory database to file.</dd>
+
+<dt>-r sec</dt>
+<dd>Interval used to poll the conntrack entries.</dd>
+
+<dt>-s network</dt>
+<dd>Specify network subnet to monitor.</dd>
+
+<dt>-o /path/to/database-folder</dt>
+<dd>Storage directory for the database files.</dd>
+
+<dt>-p /path/to/protocol-file</dt>
+<dd>Protocol description file, used to distinguish traffic streams by IP protocol number and port.</dd>
+
+<dt>-G count</dt>
+<dd>Number of database generations to retain.  After the limit is reached, the oldest database files are deleted.  The default is 10.</dd>
+
+<dt>-I interval</dt>
+<dd>Accounting period interval.  May be either in the format YYYY-MM-DD/NN,
+to start a new accounting period exactly every NN days, beginning at
+the given date, or a number specifiying the day of month at which to
+start the next accounting period.  For example:</dd>
+</dl>
+
+```
+2017-01-17/14   # every 14 days, starting Jan 17, 2017
+-2              # second to the last day of the month, e.g. 30th in March
+1               # first day of the month (default)
+```
+
+<dl>
+<dt>-P</dt>
+<dd>Whether to preallocate the maximum possible database size in memory.
+This is mainly useful for memory constrained systems which might not
+be able to satisfy memory allocation after longer uptime periods.
+Only effective in conjunction with database_limit, ignored otherwise.</dd>
+
+<dt>-Z</dt>
+<dd>Whether to gzip compress archive databases. Compressing the database
+files makes accessing old data slightly slower but helps to reduce
+storage requirements.</dd>
+</dl>
+
+
+
+### nlbw
+*NOTE: See the examples below to get started quickly.*
+
+<dl>
+<dt>-S /path/to/domain.socket</dt>
+<dd>Path to unix domain socket.  Default is /var/run/nlbwmon.sock.  This should not be required unless the daemon was instructed to use another socket path for some reason.</dd>
+
+<dt>-c command</dt>
+<dd>Specify a command.  Current commands are: show, json, csv, list, commit.  See below for more information about commands.</dd>
+
+<dt>-p /path/to/procol-database</dt>
+<dd>Protocol description file, used to distinguish traffic streams by IP protocol number and port.</dd>
+
+<dt>-g col[,col]</dt>
+<dd>Group output by the specified column.  Prefix column with a - to invert order.</dd>
+
+<dt>-o col[,col]</dt>
+<dd>Order output by the specified column.  Prefix column with a - to invert order.</dd>
+
+<dt>-t YYYY-MM-DD</dt>
+<dd>Read data from the specified database, instead of the active database.  Use the list command to view available databases.</dd>
+
+<dt>-n</dt>
+<dd>Use plain numbers, dont divide to get K, M, G, etc.</dd>
+
+<dt>-s char</dt>
+<dd>Specify the separator character when using CSV format.  If no argument is provided, an empty string is assumed.  Currently only applies to CSV format.</dd>
+
+<dt>-q char</dt>
+<dd>Specify the quote character when using CSV format.  If no argument is provided, an empty string is assumed.  Currently only applies to CSV format.</dd>
+
+<dt>-e char</dt>
+<dd>Specify the escape character when using CSV format.  If no argument is provided, an empty string is assumed.  Currently only applies to CSV format.</dd>
+</dl>
+
+
+
+### Commands available for nlbw:
+
+#### show
+Output stats in human readable format.
+
+#### json
+Output stats in JSON format.
+
+#### csv
+Output stats in CSV format.
+
+#### list
+List available databases.  Select a database to read from, and specify it with the -t option.
+
+#### commit
+Write data stored in memory to database file.  Use just before a reboot for example.
+
+## Use this repository as a package feed:
+
+You can easily build nlbwmon from lede by including this repository in your build environment:
 
     cp feeds.conf.default feeds.conf
     echo "src-git nlbwmon https://github.com/jow-/nlbwmon.git" >> feeds.conf
     ./scripts/feeds update nlbwmon
     ./scripts/feeds install nlbwmon
+
+
+
+## Examples
 
 Once the package is installed, use the "nlbw" command to dump gathered values:
 
@@ -52,6 +180,22 @@ Prefix order field names with dash to invert order:
     00:0d:b9:35:88:49        20          0 B (       0 )     1.79 KB (      23 )
     a0:99:9b:94:59:06         9     49.70 KB (      88 )    18.59 KB (     106 )
     00:00:00:00:00:00         2          0 B (       0 )         0 B (       0 )
+
+Machine readable output, should work well with rrdcollect:
+
+	$ nlbw -c csv -g mac -o mac -q
+	mac     conns   rx_bytes        rx_pkts tx_bytes        tx_pkts
+	00:00:00:00:00:00       411     72968   751     61428   767
+	34:02:86:17:5e:03       598     239950465       171095  5715237 86155
+	ac:37:43:a1:2d:47       125     284027227       205678  6451867 107297
+
+Read stats for a certain time period:
+
+	$ nlbw -t 2017-02-01 -c csv -g mac -o mac -q
+	mac     conns   rx_bytes        rx_pkts tx_bytes        tx_pkts
+	00:00:00:00:00:00       157     26960   205     17878   218
+	34:02:86:17:5e:03       327     117213007       83817   3366892 51560
+
 
 Use the json query to dump the raw database values in JSON format:
 
