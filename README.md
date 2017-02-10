@@ -184,6 +184,12 @@ Machine readable output, should work well with rrdcollect:
 	34:02:86:17:5e:03       598     239950465       171095  5715237 86155
 	ac:37:43:a1:2d:47       125     284027227       205678  6451867 107297
 
+Read stats for a certain time period:
+	$ nlbw -t 2017-02-01 -c csv -g mac -o mac -q
+	mac     conns   rx_bytes        rx_pkts tx_bytes        tx_pkts
+	00:00:00:00:00:00       157     26960   205     17878   218
+	34:02:86:17:5e:03       327     117213007       83817   3366892 51560
+
 
 Use the json query to dump the raw database values in JSON format:
 
