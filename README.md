@@ -73,7 +73,7 @@ storage requirements.</dd>
 <dt>-c</dt>
 <dd>Specify a command.  Current commands are: show, json, csv, list, commit</dd>
 
-<dt>-p path-to-procol-database</dt>
+<dt>-p /path/to/procol-database</dt>
 <dd>Protocol description file, used to distinguish traffic streams by IP protocol number and port.</dd>
 
 <dt>-g col[,col]</dt>
