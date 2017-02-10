@@ -16,8 +16,10 @@ NOTE: an init script and config file is provided for lede, allowing these settin
 
 i
 :
+
 -r [sec]
 :  Interval used to poll the conntrack entries.
+
 s
 :
 o
