@@ -15,8 +15,35 @@ Each time the conntrack entries are polled, their counters are reset (zero-on-re
 NOTE: an init script and config file is provided for lede, allowing these settings to be configured via uci.  Just take a look at /etc/config/nlbwmon.
 
 <dl>
+
+<dt>-i [sec]</dt>
+<dd>Interval used to save in-memory database to file.</dd>
+
 <dt>-r [sec]</dt>
 <dd>Interval used to poll the conntrack entries.</dd>
+
+<dt>-s [network]</dt>
+<dd>Specify network subnet to monitor</dd>
+
+<dt>-o [path-to-database-file]</dt>
+<dd>Storage directory for the database files</dd>
+
+<dt>-p [path-to-procol-database]</dt>
+<dd>Protocol description file, used to distinguish traffic streams by IP protocol number and port.</dd>
+
+<dt></dt>
+<dd></dd>
+
+<dt></dt>
+<dd></dd>
+
+<dt></dt>
+<dd></dd>
+
+<dt></dt>
+<dd></dd>
+
+
 </dl>
 
 
