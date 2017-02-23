@@ -132,13 +132,21 @@ parse_event(void *reply, int len, bool allow_insert, bool update_mac)
 	static struct nlattr *counters[CTA_COUNTERS_MAX + 1];
 
 	struct record r = { };
-	struct in6_addr saddr, daddr;
+	struct in6_addr orig_saddr, orig_daddr, reply_saddr, reply_daddr;
+
+	uint64_t orig_pkts, orig_bytes, reply_pkts, reply_bytes;
 
 	for (hdr = reply; nlmsg_ok(hdr, len); hdr = nlmsg_next(hdr, &len)) {
 		gnlh = nlmsg_data(hdr);
+		orig_pkts = 0;
+		orig_bytes = 0;
+		reply_pkts = 0;
+		reply_bytes = 0;
 		memset(&r, 0, sizeof(r));
-		memset(&saddr, 0, sizeof(saddr));
-		memset(&daddr, 0, sizeof(daddr));
+		memset(&orig_saddr, 0, sizeof(orig_saddr));
+		memset(&orig_daddr, 0, sizeof(orig_daddr));
+		memset(&reply_saddr, 0, sizeof(reply_saddr));
+		memset(&reply_daddr, 0, sizeof(reply_daddr));
 
 		if (nla_parse(attr, __CTA_MAX, genlmsg_attrdata(nlmsg_data(hdr), 0),
 				      genlmsg_attrlen(gnlh, 0), NULL))
@@ -148,30 +156,57 @@ parse_event(void *reply, int len, bool allow_insert, bool update_mac)
 		    nla_parse_nested(tuple, CTA_TUPLE_MAX, attr[CTA_TUPLE_ORIG], ct_tuple_policy))
 			continue;
 
-		if (!parse_addrs(tuple, &r.family, &saddr, &daddr) || !parse_proto_port(tuple, &r))
+		if (!parse_addrs(tuple, &r.family, &orig_saddr, &orig_daddr) || !parse_proto_port(tuple, &r))
+			continue;
+
+		if (!attr[CTA_TUPLE_REPLY] ||
+		    nla_parse_nested(tuple, CTA_TUPLE_MAX, attr[CTA_TUPLE_REPLY], ct_tuple_policy))
+			continue;
+
+		if (!parse_addrs(tuple, &r.family, &reply_saddr, &reply_daddr))
 			continue;
 
 		if (attr[CTA_COUNTERS_ORIG] &&
 		    !nla_parse_nested(counters, CTA_COUNTERS_MAX, attr[CTA_COUNTERS_ORIG], ct_counters_policy)) {
-			r.out_pkts = nla_get_u64(counters[CTA_COUNTERS_PACKETS]);
-			r.out_bytes = nla_get_u64(counters[CTA_COUNTERS_BYTES]);
+			orig_pkts = nla_get_u64(counters[CTA_COUNTERS_PACKETS]);
+			orig_bytes = nla_get_u64(counters[CTA_COUNTERS_BYTES]);
 		}
 
 		if (attr[CTA_COUNTERS_REPLY] &&
 		    !nla_parse_nested(counters, CTA_COUNTERS_MAX, attr[CTA_COUNTERS_REPLY], ct_counters_policy)) {
-			r.in_pkts = nla_get_u64(counters[CTA_COUNTERS_PACKETS]);
-			r.in_bytes = nla_get_u64(counters[CTA_COUNTERS_BYTES]);
+			reply_pkts = nla_get_u64(counters[CTA_COUNTERS_PACKETS]);
+			reply_bytes = nla_get_u64(counters[CTA_COUNTERS_BYTES]);
 		}
 
-		if (match_subnet(r.family, &saddr) || !match_subnet(r.family, &daddr))
+		/* local -> remote */
+		if (!match_subnet(r.family, &orig_saddr) && match_subnet(r.family, &orig_daddr)) {
+			r.in_pkts = reply_pkts;
+			r.in_bytes = reply_bytes;
+			r.out_pkts = orig_pkts;
+			r.out_bytes = orig_bytes;
+			r.src_addr.in6 = orig_saddr;
+		}
+
+		/* remote -> local */
+		else if (!match_subnet(r.family, &reply_saddr) && match_subnet(r.family, &reply_daddr)) {
+			r.in_pkts = orig_pkts;
+			r.in_bytes = orig_bytes;
+			r.out_pkts = reply_pkts;
+			r.out_bytes = reply_bytes;
+			r.src_addr.in6 = reply_saddr;
+		}
+
+		/* local -> local or remote -> remote */
+		else {
 			continue;
+		}
 
 		if (update_mac)
-			update_macaddr(r.family, &saddr);
+			update_macaddr(r.family, &r.src_addr.in6);
 
-		lookup_macaddr(r.family, &saddr, &r.src_mac.ea);
+		lookup_macaddr(r.family, &r.src_addr.in6, &r.src_mac.ea);
+
 		r.count = htobe64(allow_insert);
-		r.src_addr.in6 = saddr;
 
 		if (allow_insert)
 			database_insert(gdbh, &r);
