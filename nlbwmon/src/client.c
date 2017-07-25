@@ -497,7 +497,7 @@ handle_csv(void)
 	struct record *rec = NULL;
 	char columns[MAX] = { };
 	struct protocol *pr;
-	int8_t i, r, n;
+	int8_t i, n;
 	int err;
 
 	err = recv_database(&h);
@@ -523,7 +523,7 @@ handle_csv(void)
 	columns[TX_BYTES] = 1;
 	columns[TX_PKTS]  = 1;
 
-	for (i = 0, n = 0, r = 0; i < MAX; i++) {
+	for (i = 0, n = 0; i < MAX; i++) {
 		if (!columns[i])
 			continue;
 
