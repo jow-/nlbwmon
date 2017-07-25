@@ -103,10 +103,18 @@ static void print_database(void)
 
 static void handle_shutdown(int sig)
 {
+	char path[256];
 	uint32_t timestamp = interval_timestamp(&opt.archive_interval, 0);
 
-	database_save(gdbh, opt.tempdir, 0, false);
 	database_save(gdbh, opt.db.directory, timestamp, opt.db.compress);
+
+	if (sig == SIGTERM) {
+		snprintf(path, sizeof(path), "%s/0.db", opt.tempdir);
+		unlink(path);
+	}
+	else {
+		database_save(gdbh, opt.tempdir, 0, false);
+	}
 
 	uloop_done();
 	exit(0);
