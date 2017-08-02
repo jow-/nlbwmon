@@ -25,7 +25,6 @@
 
 #include <endian.h>
 
-#define _GNU_SOURCE
 #include <netlink/msg.h>
 #include <netlink/attr.h>
 #include <netlink/netlink.h>

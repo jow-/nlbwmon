@@ -20,7 +20,6 @@
 #include <stdbool.h>
 #include <errno.h>
 
-#define _GNU_SOURCE
 #include <netlink/netlink.h>
 #include <netlink/genl/genl.h>
 #include <linux/netfilter/nfnetlink_conntrack.h>
