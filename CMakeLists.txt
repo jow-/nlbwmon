@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.6)
 
 PROJECT(nlbwmon C)
-ADD_DEFINITIONS(-Os -Wall -Werror --std=gnu99 -g3 -Wmissing-declarations)
+ADD_DEFINITIONS(-Os -Wall -Werror --std=gnu99 -g3 -Wmissing-declarations -D_GNU_SOURCE)
 
 SET(SOURCES
 	client.c database.c neigh.c nfnetlink.c
