@@ -25,16 +25,6 @@
 6 990 FTPS
 6 993 IMAPS
 6 995 POP3S
-6 6881 BitTorrent
-6 6882 BitTorrent
-6 6883 BitTorrent
-6 6884 BitTorrent
-6 6885 BitTorrent
-6 6886 BitTorrent
-6 6887 BitTorrent
-6 6888 BitTorrent
-6 6889 BitTorrent
-6 6969 BT-Tracker
 41 0 IPv6-in-IP
 47 0 GRE
 50 0 ESP
