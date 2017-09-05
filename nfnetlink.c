@@ -93,28 +93,22 @@ parse_addrs(struct nlattr **tuple, uint8_t *family, void *saddr, void *daddr)
 }
 
 static bool
-parse_proto_port(struct nlattr **tuple, struct record *r)
+parse_proto_port(struct nlattr **tuple, bool src, uint8_t *proto, uint16_t *port)
 {
-	uint8_t proto = 0;
-	uint16_t port = 0;
 	struct nlattr *tb[CTA_PROTO_MAX + 1];
+
+	*proto = 0;
+	*port = 0;
 
 	if (nla_parse_nested(tb, CTA_PROTO_MAX, tuple[CTA_TUPLE_PROTO], ct_proto_policy))
 		return false;
 
-	if (tb[CTA_PROTO_DST_PORT])
-		port = nla_get_u16(tb[CTA_PROTO_DST_PORT]);
-
 	if (tb[CTA_PROTO_NUM]) {
-		proto = nla_get_u8(tb[CTA_PROTO_NUM]);
-		if (lookup_protocol(proto, be16toh(port))) {
-			r->proto = proto;
-			r->dst_port = port;
-		}
-		else {
-			r->proto = 0;
-			r->dst_port = 0;
-		}
+		*proto = nla_get_u8(tb[CTA_PROTO_NUM]);
+
+		if (tb[src ? CTA_PROTO_SRC_PORT : CTA_PROTO_DST_PORT])
+			*port = nla_get_u16(tb[src ? CTA_PROTO_SRC_PORT : CTA_PROTO_DST_PORT]);
+
 		return true;
 	}
 
@@ -134,6 +128,8 @@ parse_event(void *reply, int len, bool allow_insert, bool update_mac)
 	struct in6_addr orig_saddr, orig_daddr, reply_saddr, reply_daddr;
 
 	uint64_t orig_pkts, orig_bytes, reply_pkts, reply_bytes;
+	uint16_t orig_port, reply_port;
+	uint8_t orig_proto, reply_proto;
 
 	for (hdr = reply; nlmsg_ok(hdr, len); hdr = nlmsg_next(hdr, &len)) {
 		gnlh = nlmsg_data(hdr);
@@ -155,14 +151,16 @@ parse_event(void *reply, int len, bool allow_insert, bool update_mac)
 		    nla_parse_nested(tuple, CTA_TUPLE_MAX, attr[CTA_TUPLE_ORIG], ct_tuple_policy))
 			continue;
 
-		if (!parse_addrs(tuple, &r.family, &orig_saddr, &orig_daddr) || !parse_proto_port(tuple, &r))
+		if (!parse_addrs(tuple, &r.family, &orig_saddr, &orig_daddr) ||
+		    !parse_proto_port(tuple, false, &orig_proto, &orig_port))
 			continue;
 
 		if (!attr[CTA_TUPLE_REPLY] ||
 		    nla_parse_nested(tuple, CTA_TUPLE_MAX, attr[CTA_TUPLE_REPLY], ct_tuple_policy))
 			continue;
 
-		if (!parse_addrs(tuple, &r.family, &reply_saddr, &reply_daddr))
+		if (!parse_addrs(tuple, &r.family, &reply_saddr, &reply_daddr) ||
+		    !parse_proto_port(tuple, true, &reply_proto, &reply_port))
 			continue;
 
 		if (attr[CTA_COUNTERS_ORIG] &&
@@ -179,6 +177,8 @@ parse_event(void *reply, int len, bool allow_insert, bool update_mac)
 
 		/* local -> remote */
 		if (!match_subnet(r.family, &orig_saddr) && match_subnet(r.family, &orig_daddr)) {
+			r.proto = orig_proto;
+			r.dst_port = orig_port;
 			r.in_pkts = reply_pkts;
 			r.in_bytes = reply_bytes;
 			r.out_pkts = orig_pkts;
@@ -188,6 +188,8 @@ parse_event(void *reply, int len, bool allow_insert, bool update_mac)
 
 		/* remote -> local */
 		else if (!match_subnet(r.family, &reply_saddr) && match_subnet(r.family, &reply_daddr)) {
+			r.proto = reply_proto;
+			r.dst_port = reply_port;
 			r.in_pkts = orig_pkts;
 			r.in_bytes = orig_bytes;
 			r.out_pkts = reply_pkts;
@@ -198,6 +200,11 @@ parse_event(void *reply, int len, bool allow_insert, bool update_mac)
 		/* local -> local or remote -> remote */
 		else {
 			continue;
+		}
+
+		if (!lookup_protocol(r.proto, be16toh(r.dst_port))) {
+			r.proto = 0;
+			r.dst_port = 0;
 		}
 
 		if (update_mac)
