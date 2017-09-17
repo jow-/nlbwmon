@@ -168,23 +168,30 @@ static int
 ipaddr_parse(struct nl_msg *msg, void *arg)
 {
 	struct nlmsghdr *hdr = nlmsg_hdr(msg);
-	struct ifaddrmsg *ifa = nlmsg_data(hdr);
+	struct ifaddrmsg *ifa;
 	struct nlattr *addr, *tb[__IFA_MAX];
-
 	struct ifindex_query *query = arg;
+	int len = hdr->nlmsg_len;
 
-	if (hdr->nlmsg_type != RTM_NEWADDR || ifa->ifa_family != query->family)
-		return NL_SKIP;
+	for (; nlmsg_ok(hdr, len); hdr = nlmsg_next(hdr, &len)) {
+		if (hdr->nlmsg_type != RTM_NEWADDR)
+			continue;
 
-	if (nlmsg_parse(hdr, sizeof(*ifa), tb, __IFA_MAX, NULL))
-		return NL_SKIP;
+		ifa = nlmsg_data(hdr);
 
-	addr = tb[IFA_LOCAL] ? tb[IFA_LOCAL] : tb[IFA_ADDRESS];
+		if (ifa->ifa_family != query->family)
+			continue;
 
-	if (!addr || memcmp(nla_data(addr), query->addr, nla_len(addr)))
-		return NL_SKIP;
+		if (nlmsg_parse(hdr, sizeof(*ifa), tb, __IFA_MAX, NULL))
+			continue;
 
-	query->ifindex = ifa->ifa_index;
+		addr = tb[IFA_LOCAL] ? tb[IFA_LOCAL] : tb[IFA_ADDRESS];
+
+		if (!addr || memcmp(nla_data(addr), query->addr, nla_len(addr)))
+			continue;
+
+		query->ifindex = ifa->ifa_index;
+	}
 
 	return NL_SKIP;
 }
