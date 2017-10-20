@@ -573,7 +573,7 @@ database_cleanup(void)
 		if (num < 20000101 || num > timestamp)
 			continue;
 
-		snprintf(path, sizeof(path), "%s/%u.db", opt.db.directory, num);
+		snprintf(path, sizeof(path), "%s/%u%s", opt.db.directory, num, e);
 
 		if (unlink(path))
 			fprintf(stderr, "Unable to delete %s: %s\n", path, strerror(errno));
