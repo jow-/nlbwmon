@@ -169,7 +169,7 @@ ipaddr_parse(struct nl_msg *msg, void *arg)
 {
 	struct nlmsghdr *hdr = nlmsg_hdr(msg);
 	struct ifaddrmsg *ifa;
-	struct nlattr *addr, *tb[__IFA_MAX];
+	struct nlattr *addr, *tb[__IFA_MAX+1];
 	struct ifindex_query *query = arg;
 	int len = hdr->nlmsg_len;
 
@@ -228,7 +228,7 @@ link_parse(void *msg, int len)
 {
 	static struct ether_addr mac;
 
-	struct nlattr *tb[__IFLA_MAX];
+	struct nlattr *tb[__IFLA_MAX+1];
 	struct ifinfomsg *ifi;
 	struct nlmsghdr *hdr;
 
