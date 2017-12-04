@@ -69,38 +69,6 @@ struct options opt = {
 };
 
 
-static void print_database(void)
-{
-	int i;
-	struct record *r;
-	struct protocol *p;
-
-	printf("\e[1;1H\e[2J");
-
-	printf("Interval: %u - Usage: %"PRIu64"/%"PRIu64" Bytes\n\n",
-	       db_timestamp(gdbh->db),
-	       (uint64_t)db_size(gdbh->db, db_entries(gdbh->db)),
-	       (uint64_t)db_size(gdbh->db, gdbh->size));
-
-	for (i = 0; i < db_entries(gdbh->db); i++) {
-		r = db_record(gdbh->db, i);
-		p = lookup_protocol(r->proto, be16toh(r->dst_port));
-
-		printf("%17s (%s) -> %-32s"
-			   " - %" PRIu64 " Conn. "
-		       " - UP: %" PRIu64 " Pkts. / %" PRIu64 " Bytes"
-			   " - DN: %" PRIu64 " Pkts. / %" PRIu64 " Bytes\n",
-		       format_macaddr(&r->src_mac.ea),
-			   format_ipaddr(r->family, &r->src_addr),
-			   p ? p->name : "other",
-			   be64toh(r->count),
-			   be64toh(r->out_pkts), be64toh(r->out_bytes),
-			   be64toh(r->in_pkts), be64toh(r->in_bytes));
-	}
-}
-
-
-
 static void handle_shutdown(int sig)
 {
 	char path[256];
@@ -139,10 +107,8 @@ handle_refresh(struct uloop_timeout *tm)
 	err = database_archive(gdbh);
 
 	/* database successfully wrapped around and triggered a ct dump */
-	if (err == -ESTALE) {
-		print_database();
+	if (err == -ESTALE)
 		return;
-	}
 
 	/* fatal error during database archiving */
 	if (err != 0) {
@@ -158,8 +124,6 @@ handle_refresh(struct uloop_timeout *tm)
 		        strerror(-err));
 		return;
 	}
-
-	print_database();
 
 	database_save(gdbh, opt.tempdir, 0, false);
 }
@@ -352,8 +316,6 @@ server_main(int argc, char **argv)
 	sigaction(SIGINT, &sa, NULL);
 	sigaction(SIGTERM, &sa, NULL);
 	sigaction(SIGUSR1, &sa, NULL);
-
-	print_database();
 
 	commit_tm.cb = handle_commit;
 	uloop_timeout_set(&commit_tm, opt.commit_interval * 1000);
