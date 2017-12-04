@@ -17,6 +17,7 @@
 */
 
 
+#include <stdio.h>
 #include <stdbool.h>
 #include <errno.h>
 
@@ -33,6 +34,7 @@
 #include "neigh.h"
 
 
+static uint32_t n_pending_inserts = 0;
 static struct nl_sock *nl = NULL;
 static struct uloop_fd ufd = { };
 
@@ -67,6 +69,66 @@ static struct nla_policy ct_counters_policy[CTA_COUNTERS_MAX+1] = {
 	[CTA_COUNTERS32_BYTES]  = { .type = NLA_U32 },
 };
 
+
+struct delayed_record {
+	struct uloop_timeout timeout;
+	struct record record;
+};
+
+static void
+database_insert_immediately(struct record *r)
+{
+	if (r->count != 0)
+		database_insert(gdbh, r);
+	else
+		database_update(gdbh, r);
+}
+
+static void
+database_insert_delayed_cb(struct uloop_timeout *t)
+{
+	int err;
+	struct delayed_record *dr;
+
+	dr = container_of(t, struct delayed_record, timeout);
+	err = update_macaddr(dr->record.family, &dr->record.src_addr.in6);
+
+	if (err == 0)
+		lookup_macaddr(dr->record.family, &dr->record.src_addr.in6,
+		               &dr->record.src_mac.ea);
+
+	database_insert_immediately(&dr->record);
+	free(dr);
+
+	if (n_pending_inserts > 0)
+		n_pending_inserts--;
+}
+
+static int
+database_insert_delayed(struct record *r)
+{
+	struct delayed_record *dr;
+
+	/* to avoid gobbling up too much memory, tie the maximum allowed number
+	 * of pending insertions to the configured database limit */
+	if (n_pending_inserts >= opt.db.limit) {
+		fprintf(stderr, "Too many pending MAC address lookups\n");
+		database_insert_immediately(r);
+		return -ENOSPC;
+	}
+
+	dr = calloc(1, sizeof(*dr));
+
+	if (!dr)
+		return -ENOMEM;
+
+	dr->record = *r;
+	dr->timeout.cb = database_insert_delayed_cb;
+
+	n_pending_inserts++;
+
+	return uloop_timeout_set(&dr->timeout, 500) ? -EEXIST : 0;
+}
 
 static bool
 parse_addrs(struct nlattr **tuple, uint8_t *family, void *saddr, void *daddr)
@@ -118,6 +180,7 @@ parse_proto_port(struct nlattr **tuple, bool src, uint8_t *proto, uint16_t *port
 static void
 parse_event(void *reply, int len, bool allow_insert, bool update_mac)
 {
+	int err;
 	struct nlmsghdr *hdr;
 	struct genlmsghdr *gnlh;
 	static struct nlattr *attr[__CTA_MAX + 1];
@@ -207,17 +270,17 @@ parse_event(void *reply, int len, bool allow_insert, bool update_mac)
 			r.dst_port = 0;
 		}
 
+		r.count = htobe64(allow_insert);
+
 		if (update_mac)
 			update_macaddr(r.family, &r.src_addr.in6);
 
-		lookup_macaddr(r.family, &r.src_addr.in6, &r.src_mac.ea);
+		err = lookup_macaddr(r.family, &r.src_addr.in6, &r.src_mac.ea);
 
-		r.count = htobe64(allow_insert);
-
-		if (allow_insert)
-			database_insert(gdbh, &r);
+		if (update_mac && err == -ENOENT)
+			database_insert_delayed(&r);
 		else
-			database_update(gdbh, &r);
+			database_insert_immediately(&r);
 	}
 }
 
