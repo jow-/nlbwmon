@@ -111,7 +111,7 @@ database_insert_delayed(struct record *r)
 
 	/* to avoid gobbling up too much memory, tie the maximum allowed number
 	 * of pending insertions to the configured database limit */
-	if (n_pending_inserts >= opt.db.limit) {
+	if (opt.db.limit > 0 && n_pending_inserts >= opt.db.limit) {
 		fprintf(stderr, "Too many pending MAC address lookups\n");
 		database_insert_immediately(r);
 		return -ENOSPC;
