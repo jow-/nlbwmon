@@ -42,6 +42,27 @@ static struct uloop_fd sock_fd = { };
 static struct uloop_timeout sock_tm = { };
 
 
+static ssize_t
+send_data(int sock, const void *buf, size_t len)
+{
+	ssize_t rv, sent = 0;
+
+	while (len) {
+		rv = send(sock, buf + sent, len, 0);
+
+		if (rv == -1 && errno == EAGAIN)
+			continue;
+
+		if (rv <= 0)
+			return rv;
+
+		len -= rv;
+		sent += rv;
+	}
+
+	return sent;
+}
+
 static int
 handle_dump(int sock, const char *arg)
 {
@@ -74,13 +95,13 @@ handle_dump(int sock, const char *arg)
 			goto out;
 	}
 
-	if (send(sock, h->db, sizeof(*h->db), 0) != sizeof(*h->db)) {
+	if (send_data(sock, h->db, sizeof(*h->db)) != sizeof(*h->db)) {
 		err = errno;
 		goto out;
 	}
 
 	while ((rec = database_next(h, rec)) != NULL)
-		if (send(sock, rec, db_recsize, 0) != db_recsize) {
+		if (send_data(sock, rec, db_recsize) != db_recsize) {
 			err = errno;
 			goto out;
 		}
@@ -129,7 +150,7 @@ handle_commit(int sock, const char *arg)
 	len = snprintf(buf, sizeof(buf), "%d %s", -err,
 	               err ? strerror(-err) : "ok");
 
-	if (send(sock, buf, len, 0) != len)
+	if (send_data(sock, buf, len) != len)
 		return -errno;
 
 	return 0;
