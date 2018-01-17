@@ -656,7 +656,7 @@ handle_commit(void)
 	printf("%s\n", reply);
 	close(ctrl_socket);
 
-	return strtol(reply, NULL, 10);
+	return -strtol(reply, NULL, 10);
 }
 
 static struct command commands[] = {
