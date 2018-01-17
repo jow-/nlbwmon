@@ -83,6 +83,7 @@ struct database {
 
 struct dbhandle {
 	bool prealloc;
+	bool pristine;
 	uint32_t limit;
 	uint32_t size;
 	uint32_t off;

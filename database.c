@@ -113,6 +113,7 @@ database_alloc(avl_tree_comp key_fn, void *key_ptr, bool prealloc,
 		return NULL;
 	}
 
+	h->pristine = true;
 	h->prealloc = prealloc;
 	h->limit = limit;
 	h->size = size;
@@ -379,10 +380,24 @@ database_save(struct dbhandle *h, const char *path, uint32_t timestamp,
 {
 	uint32_t old_timestamp;
 	char file[256];
+	struct stat s;
 	int err;
 
 	snprintf(file, sizeof(file), "%s/%u.db%s",
 	         path, timestamp, compress ? ".gz" : "");
+
+	/* If the database is pristine (was not read from disk), there must
+	 * not be an existing database file already. If there is a file now
+	 * which was not present when setting up the database, we're likely
+	 * dealing with a storage location that only became available after
+	 * nlbwmon started.
+	 *
+	 * Return -EEXIST to the caller in such a case to allow it to take
+	 * appropriate actions, such as emitting a warning or merging the
+	 * on-disk data.
+	 */
+	if (h->pristine && stat(file, &s) == 0)
+		return -EEXIST;
 
 	old_timestamp = h->db->timestamp;
 	h->db->timestamp = htobe32(timestamp);
@@ -395,6 +410,7 @@ database_save(struct dbhandle *h, const char *path, uint32_t timestamp,
 	if (err)
 		unlink(file);
 
+	h->pristine = false;
 	h->db->timestamp = old_timestamp;
 
 	return err;
@@ -435,6 +451,8 @@ database_restore_gzip(struct dbhandle *h, const char *path, uint32_t timestamp)
 	}
 
 	if (h) {
+		h->pristine = false;
+
 		for (i = 0; i < entries; i++) {
 			if (gzread(gz, &rec, db_recsize) != db_recsize) {
 				database_gzclose(gz);
@@ -506,6 +524,7 @@ database_restore_mmap(struct dbhandle *h, const char *path, uint32_t timestamp,
 	}
 
 	errno = 0;
+	h->pristine = false;
 
 	for (i = 0; i < entries; i++)
 		database_insert(h, db_diskrecord(db, i));
