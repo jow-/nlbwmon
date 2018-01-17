@@ -69,12 +69,37 @@ struct options opt = {
 };
 
 
+static void save_persistent(uint32_t timestamp)
+{
+	int err;
+
+	err = database_save(gdbh, opt.db.directory, timestamp, opt.db.compress);
+
+	if (err == -EEXIST) {
+		fprintf(stderr, "Existing database found, merging values\n");
+
+		err = database_load(gdbh, opt.db.directory, timestamp);
+
+		if (err) {
+			fprintf(stderr, "Unable to load existing database: %s\n",
+			        strerror(-err));
+		}
+	}
+
+	err = database_save(gdbh, opt.db.directory, timestamp, opt.db.compress);
+
+	if (err) {
+		fprintf(stderr, "Unable to save database: %s\n",
+		        strerror(-err));
+	}
+}
+
 static void handle_shutdown(int sig)
 {
 	char path[256];
 	uint32_t timestamp = interval_timestamp(&opt.archive_interval, 0);
 
-	database_save(gdbh, opt.db.directory, timestamp, opt.db.compress);
+	save_persistent(timestamp);
 
 	if (sig == SIGTERM) {
 		snprintf(path, sizeof(path), "%s/0.db", opt.tempdir);
@@ -94,7 +119,7 @@ handle_commit(struct uloop_timeout *tm)
 	uint32_t timestamp = interval_timestamp(&opt.archive_interval, 0);
 
 	uloop_timeout_set(tm, opt.commit_interval * 1000);
-	database_save(gdbh, opt.db.directory, timestamp, opt.db.compress);
+	save_persistent(timestamp);
 }
 
 static void

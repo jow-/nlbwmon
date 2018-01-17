@@ -396,7 +396,7 @@ database_save(struct dbhandle *h, const char *path, uint32_t timestamp,
 	 * appropriate actions, such as emitting a warning or merging the
 	 * on-disk data.
 	 */
-	if (h->pristine && stat(file, &s) == 0)
+	if (h->pristine && timestamp > 0 && stat(file, &s) == 0)
 		return -EEXIST;
 
 	old_timestamp = h->db->timestamp;
@@ -410,7 +410,9 @@ database_save(struct dbhandle *h, const char *path, uint32_t timestamp,
 	if (err)
 		unlink(file);
 
-	h->pristine = false;
+	if (timestamp > 0)
+		h->pristine = false;
+
 	h->db->timestamp = old_timestamp;
 
 	return err;
