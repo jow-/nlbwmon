@@ -330,6 +330,14 @@ handle_finish(struct nl_msg *msg, void *arg)
 	return NL_SKIP;
 }
 
+static int
+handle_ack(struct nl_msg *msg, void *arg)
+{
+	int *ret = arg;
+	*ret = 0;
+	return NL_STOP;
+}
+
 
 int
 nfnetlink_connect(void)
@@ -438,16 +446,15 @@ nfnetlink_dump(bool allow_insert)
 
 	nla_nest_end(req, tuple);
 
-	err = -EAGAIN;
-
 	nl_cb_set(cb, NL_CB_VALID, NL_CB_CUSTOM, handle_dump, &allow_insert);
 	nl_cb_set(cb, NL_CB_FINISH, NL_CB_CUSTOM, handle_finish, &err);
+	nl_cb_set(cb, NL_CB_ACK, NL_CB_CUSTOM, handle_ack, &err);
 	nl_cb_err(cb, NL_CB_CUSTOM, handle_error, &err);
 
 	if (nl_send_auto_complete(nl, req) < 0)
 		goto err;
 
-	while (err == -EAGAIN)
+	for (err = 1; err > 0; )
 		nl_recvmsgs(nl, cb);
 
 	errno = -err;
