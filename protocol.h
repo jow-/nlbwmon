@@ -23,7 +23,7 @@
 #include <libubox/avl.h>
 
 #define PR_NAMELEN 32
-#define PR_SCANFMT "%hhu %hu %32s\n"
+#define PR_SCANFMT "%hhu %hu %32[^\n]\n"
 
 
 struct protocol {
