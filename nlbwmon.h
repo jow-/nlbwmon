@@ -36,6 +36,8 @@ struct options {
 	time_t refresh_interval;
 	struct interval archive_interval;
 
+	int netlink_buffer_size;
+
 	const char *protocol_db;
 	const char *tempdir;
 	const char *socket;

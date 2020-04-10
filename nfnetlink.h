@@ -24,7 +24,7 @@
 #include "database.h"
 
 
-int nfnetlink_connect(void);
+int nfnetlink_connect(int bufsize);
 int nfnetlink_dump(bool allow_insert);
 
 #endif /* __NFNETLINK_H__ */

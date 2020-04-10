@@ -59,6 +59,8 @@ struct options opt = {
 	.commit_interval = 86400,
 	.refresh_interval = 30,
 
+	.netlink_buffer_size = 524288,
+
 	.tempdir = "/tmp",
 	.socket = "/var/run/nlbwmon.sock",
 	.protocol_db = "/usr/share/nlbwmon/protocols",
@@ -203,8 +205,17 @@ server_main(int argc, char **argv)
 	int optchr, err;
 	char *e;
 
-	while ((optchr = getopt(argc, argv, "i:r:s:o:p:G:I:L:PZ")) > -1) {
+	while ((optchr = getopt(argc, argv, "b:i:r:s:o:p:G:I:L:PZ")) > -1) {
 		switch (optchr) {
+		case 'b':
+			opt.netlink_buffer_size = (int)strtol(optarg, &e, 0);
+			if (e == optarg || *e || opt.netlink_buffer_size < 32768) {
+				fprintf(stderr, "Invalid netlink buffer size '%s'\n",
+				        optarg);
+				return 1;
+			}
+			break;
+
 		case 'i':
 			err = parse_timearg(optarg, &opt.commit_interval);
 			if (err) {
@@ -321,7 +332,7 @@ server_main(int argc, char **argv)
 		exit(1);
 	}
 
-	err = nfnetlink_connect();
+	err = nfnetlink_connect(opt.netlink_buffer_size);
 
 	if (err) {
 		fprintf(stderr, "Unable to connect nfnetlink: %s\n",

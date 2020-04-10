@@ -340,7 +340,7 @@ handle_ack(struct nl_msg *msg, void *arg)
 
 
 int
-nfnetlink_connect(void)
+nfnetlink_connect(int bufsize)
 {
 	nl = nl_socket_alloc();
 
@@ -352,6 +352,9 @@ nfnetlink_connect(void)
 
 	if (nl_socket_add_memberships(nl, NFNLGRP_CONNTRACK_NEW,
 	                                  NFNLGRP_CONNTRACK_DESTROY, 0))
+		return -errno;
+
+	if (nl_socket_set_buffer_size(nl, bufsize, 0))
 		return -errno;
 
 	ufd.cb = handle_event;
