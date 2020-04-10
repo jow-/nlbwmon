@@ -375,7 +375,7 @@ nfnetlink_dump(bool allow_insert)
 		.res_id = 0, //htons(res_id),
 	};
 
-	int err;
+	int err, ret;
 
 	errno = ENOMEM;
 
@@ -454,8 +454,20 @@ nfnetlink_dump(bool allow_insert)
 	if (nl_send_auto_complete(nl, req) < 0)
 		goto err;
 
-	for (err = 1; err > 0; )
-		nl_recvmsgs(nl, cb);
+	for (err = 1; err > 0; ) {
+		ret = nl_recvmsgs(nl, cb);
+
+		if (ret <= 0) {
+			if (ret < 0) {
+				fprintf(stderr, "Netlink receive failure: %s\n",
+				        nl_geterror(ret));
+
+				errno = (-ret == NLE_NOMEM) ? ENOBUFS : EIO;
+			}
+
+			break;
+		}
+	}
 
 	errno = -err;
 
