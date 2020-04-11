@@ -338,6 +338,12 @@ handle_ack(struct nl_msg *msg, void *arg)
 	return NL_STOP;
 }
 
+static int
+handle_seq(struct nl_msg *msg, void *arg)
+{
+	return NL_OK;
+}
+
 
 int
 nfnetlink_connect(int bufsize)
@@ -452,6 +458,7 @@ nfnetlink_dump(bool allow_insert)
 	nl_cb_set(cb, NL_CB_VALID, NL_CB_CUSTOM, handle_dump, &allow_insert);
 	nl_cb_set(cb, NL_CB_FINISH, NL_CB_CUSTOM, handle_finish, &err);
 	nl_cb_set(cb, NL_CB_ACK, NL_CB_CUSTOM, handle_ack, &err);
+	nl_cb_set(cb, NL_CB_SEQ_CHECK, NL_CB_CUSTOM, handle_seq, NULL);
 	nl_cb_err(cb, NL_CB_CUSTOM, handle_error, &err);
 
 	if (nl_send_auto_complete(nl, req) < 0)
@@ -460,14 +467,13 @@ nfnetlink_dump(bool allow_insert)
 	for (err = 1; err > 0; ) {
 		ret = nl_recvmsgs(nl, cb);
 
-		if (ret <= 0) {
-			if (ret < 0) {
-				fprintf(stderr, "Netlink receive failure: %s\n",
-				        nl_geterror(ret));
-
-				errno = (-ret == NLE_NOMEM) ? ENOBUFS : EIO;
-			}
-
+		if (ret == 0) {
+			err = 0;
+			break;
+		}
+		else if (ret < 0) {
+			fprintf(stderr, "Netlink receive failure: %s\n", nl_geterror(ret));
+			err = (-ret == NLE_NOMEM) ? -ENOBUFS : -EIO;
 			break;
 		}
 	}
