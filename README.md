@@ -54,11 +54,17 @@ start the next accounting period.  For example:</dd>
 ```
 
 <dl>
+
+<dt>-L count</dt>
+<dd>The maximum amount of entries that should be put into the database,
+setting the limit to 0 will allow databases to grow indefinitely.
+The default is 10.</dd>
+
 <dt>-P</dt>
 <dd>Whether to preallocate the maximum possible database size in memory.
 This is mainly useful for memory constrained systems which might not
 be able to satisfy memory allocation after longer uptime periods.
-Only effective in conjunction with database_limit, ignored otherwise.</dd>
+Only effective in conjunction with -L option, ignored otherwise.</dd>
 
 <dt>-Z</dt>
 <dd>Whether to gzip compress archive databases. Compressing the database
