@@ -344,6 +344,30 @@ handle_seq(struct nl_msg *msg, void *arg)
 	return NL_OK;
 }
 
+static void
+check_rmem_max(int bufsize)
+{
+	char buf[16];
+	int max = 0;
+	FILE *f;
+
+	f = fopen("/proc/sys/net/core/rmem_max", "r");
+
+	if (f) {
+		if (fgets(buf, sizeof(buf), f))
+			max = atoi(buf);
+
+		fclose(f);
+	}
+
+	if (bufsize > max)
+		fprintf(stderr,
+		        "The netlink receive buffer size of %d bytes will be capped to %d bytes\n"
+		        "by the kernel. The net.core.rmem_max sysctl limit needs to be raised to\n"
+		        "at least %d in order to sucessfully set the desired receive buffer size!\n",
+		        bufsize, max, bufsize);
+}
+
 
 int
 nfnetlink_connect(int bufsize)
@@ -359,6 +383,8 @@ nfnetlink_connect(int bufsize)
 	if (nl_socket_add_memberships(nl, NFNLGRP_CONNTRACK_NEW,
 	                                  NFNLGRP_CONNTRACK_DESTROY, 0))
 		return -errno;
+
+	check_rmem_max(bufsize);
 
 	if (nl_socket_set_buffer_size(nl, bufsize, 0))
 		return -errno;
