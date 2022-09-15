@@ -86,9 +86,10 @@ static void save_persistent(uint32_t timestamp)
 			fprintf(stderr, "Unable to load existing database: %s\n",
 			        strerror(-err));
 		}
+		else {
+			err = database_save(gdbh, opt.db.directory, timestamp, opt.db.compress);
+		}
 	}
-
-	err = database_save(gdbh, opt.db.directory, timestamp, opt.db.compress);
 
 	if (err) {
 		fprintf(stderr, "Unable to save database: %s\n",
