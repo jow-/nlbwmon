@@ -365,9 +365,13 @@ avl_cmp_neigh(const void *k1, const void *k2, void *ptr)
 	const union neigh_key *a = k1;
 	const union neigh_key *b = k2;
 
-	for (i = 0; i < sizeof(a->u32) / sizeof(a->u32[0]); i++)
-		if (a->u32[i] != b->u32[i])
-			return (a->u32[i] - b->u32[i]);
+	for (i = 0; i < sizeof(a->u32) / sizeof(a->u32[0]); i++) {
+		if (a->u32[i] < b->u32[i])
+			return -1;
+
+		if (a->u32[i] > b->u32[i])
+			return 1;
+	}
 
 	return 0;
 }
