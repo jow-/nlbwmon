@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.0)
+include(CheckFunctionExists)
 
 project(nlbwmon C)
 add_definitions(-Os -Wall -Werror --std=gnu99 -g3 -Wmissing-declarations -D_GNU_SOURCE)
@@ -20,6 +21,14 @@ else()
   target_link_libraries(nlbwmon ${LIBNL_LIBRARY} ${LIBNL_GENL_LIBRARY})
   find_path(LIBNL_LIBRARY_INCLUDE_DIR NAMES netlink/netlink.h PATH_SUFFIXES libnl3)
   include_directories(${LIBNL_LIBRARY_INCLUDE_DIR})
+endif()
+
+set(CMAKE_REQUIRED_LIBRARIES ubox)
+check_function_exists(uloop_interval_set INTERVAL_FUNCTION_EXISTS)
+unset(CMAKE_REQUIRED_LIBRARIES)
+
+if (INTERVAL_FUNCTION_EXISTS)
+  add_definitions(-DHAVE_ULOOP_INTERVAL)
 endif()
 
 target_link_libraries(nlbwmon ubox z)

@@ -52,8 +52,18 @@
 #include "client.h"
 #include "utils.h"
 
-static struct uloop_timeout commit_tm = { };
-static struct uloop_timeout refresh_tm = { };
+#ifdef HAVE_ULOOP_INTERVAL
+# define uloop_timer_type uloop_interval
+# define uloop_timer_set(tm, ms) uloop_interval_set(tm, ms)
+# define uloop_timer_reset(tm, ms)
+#else
+# define uloop_timer_type uloop_timeout
+# define uloop_timer_set(tm, ms) uloop_timeout_set(tm, ms)
+# define uloop_timer_reset(tm, ms) uloop_timeout_set(tm, ms)
+#endif
+
+static struct uloop_timer_type commit_tm = { };
+static struct uloop_timer_type refresh_tm = { };
 
 struct options opt = {
 	.commit_interval = 86400,
@@ -116,20 +126,20 @@ static void handle_shutdown(int sig)
 }
 
 static void
-handle_commit(struct uloop_timeout *tm)
+handle_commit(struct uloop_timer_type *tm)
 {
 	uint32_t timestamp = interval_timestamp(&opt.archive_interval, 0);
 
-	uloop_timeout_set(tm, opt.commit_interval * 1000);
+	uloop_timer_reset(tm, opt.commit_interval * 1000);
 	save_persistent(timestamp);
 }
 
 static void
-handle_refresh(struct uloop_timeout *tm)
+handle_refresh(struct uloop_timer_type *tm)
 {
 	int err;
 
-	uloop_timeout_set(tm, opt.refresh_interval * 1000);
+	uloop_timer_reset(tm, opt.refresh_interval * 1000);
 
 	err = database_archive(gdbh);
 
@@ -354,10 +364,10 @@ server_main(int argc, char **argv)
 	sigaction(SIGUSR1, &sa, NULL);
 
 	commit_tm.cb = handle_commit;
-	uloop_timeout_set(&commit_tm, opt.commit_interval * 1000);
+	uloop_timer_set(&commit_tm, opt.commit_interval * 1000);
 
 	refresh_tm.cb = handle_refresh;
-	uloop_timeout_set(&refresh_tm, opt.refresh_interval * 1000);
+	uloop_timer_set(&refresh_tm, opt.refresh_interval * 1000);
 
 	uloop_run();
 
