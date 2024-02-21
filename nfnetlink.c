@@ -493,11 +493,7 @@ nfnetlink_dump(bool allow_insert)
 	for (err = 1; err > 0; ) {
 		ret = nl_recvmsgs(nl, cb);
 
-		if (ret == 0) {
-			err = 0;
-			break;
-		}
-		else if (ret < 0) {
+		if (ret < 0) {
 			fprintf(stderr, "Netlink receive failure: %s\n", nl_geterror(ret));
 			err = (-ret == NLE_NOMEM) ? -ENOBUFS : -EIO;
 			break;
