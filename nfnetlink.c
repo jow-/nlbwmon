@@ -293,10 +293,13 @@ handle_event(struct uloop_fd *fd, unsigned int ev)
 	bool is_new;
 	int len;
 
-	len = nl_recv(nl, &peer, &msg, NULL);
+	database_archive(gdbh);
 
-	if (len > 0) {
-		database_archive(gdbh);
+	while (true) {
+		len = nl_recv(nl, &peer, &msg, NULL);
+
+		if (len <= 0)
+			break;
 
 		hdr = (struct nlmsghdr *)msg;
 		is_new = (NFNL_MSG_TYPE(hdr->nlmsg_type) == IPCTNL_MSG_CT_NEW);
