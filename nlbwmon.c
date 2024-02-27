@@ -144,8 +144,10 @@ handle_refresh(struct uloop_timer_type *tm)
 	err = database_archive(gdbh);
 
 	/* database successfully wrapped around and triggered a ct dump */
-	if (err == -ESTALE)
+	if (err == -ESTALE) {
+		database_cleanup();
 		return;
+	}
 
 	/* fatal error during database archiving */
 	if (err != 0) {
