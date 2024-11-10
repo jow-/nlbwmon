@@ -129,6 +129,9 @@ handle_list(int sock, const char *arg)
 				fprintf(stderr, "Corrupted database detected: %d (%s)\n",
 				        timestamp, strerror(-err));
 
+			if (opt.db.generations && delta > -opt.db.generations)
+				continue;
+
 			break;
 		}
 
