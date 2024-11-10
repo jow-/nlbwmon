@@ -297,14 +297,14 @@ handle_show(void)
 		printf("%c Fam ", columns[FAMILY]);
 
 	if (columns[HOST]) {
-		printf("         %c Host (    MAC )  ", columns[HOST]);
+		printf("                                 %c Host (    MAC )  ", columns[HOST]);
 	}
 	else {
 		if (columns[MAC])
 			printf("            %c MAC  ", columns[MAC]);
 
 		if (columns[IP])
-			printf("           %c IP  ", columns[IP]);
+			printf("                                   %c IP  ", columns[IP]);
 	}
 
 	if (columns[LAYER7]) {
@@ -328,7 +328,7 @@ handle_show(void)
 			printf("IPv%d  ", rec->family == AF_INET ? 4 : 6);
 
 		if (columns[HOST]) {
-			printf("%15s (%02x:%02x:%02x)  ",
+			printf("%39s (%02x:%02x:%02x)  ",
 			       format_ipaddr(rec->family, &rec->src_addr),
 			       rec->src_mac.ea.ether_addr_octet[3],
 			       rec->src_mac.ea.ether_addr_octet[4],
@@ -339,7 +339,7 @@ handle_show(void)
 				printf("%17s  ", format_macaddr(&rec->src_mac.ea));
 
 			if (columns[IP])
-				printf("%15s  ", format_ipaddr(rec->family, &rec->src_addr));
+				printf("%39s  ", format_ipaddr(rec->family, &rec->src_addr));
 		}
 
 		if (columns[LAYER7]) {
