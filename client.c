@@ -92,6 +92,7 @@ static struct field fields[MAX] = {
 
 static struct {
 	int timestamp;
+	bool minute;
 	bool plain_numbers;
 	int8_t group_by[1 + MAX];
 	int8_t order_by[1 + MAX];
@@ -217,7 +218,7 @@ recv_database(struct dbhandle **h)
 	int i, len, err, ctrl_socket;
 	struct database db;
 	struct record rec;
-	char req[sizeof("dump YYYYMMDD\0")];
+	char req[sizeof("dump -2147483648\0")];
 
 	ctrl_socket = usock(USOCK_UNIX, opt.socket, NULL);
 
@@ -621,10 +622,19 @@ handle_list(void)
 		         sizeof(client_opt.timestamp), 0) <= 0)
 			break;
 
-		printf("%04d-%02d-%02d\n",
-		       client_opt.timestamp / 10000,
-		       client_opt.timestamp % 10000 / 100,
-		       client_opt.timestamp % 100);
+		if (client_opt.minute) {
+			time_t t = client_opt.timestamp * 60;
+			struct tm *timeinfo = localtime (&t);
+			char timestr[50];
+			strftime(timestr, sizeof(timestr), "%F %T", timeinfo);
+			printf ("%d (%s)\n", client_opt.timestamp, timestr);
+		}
+		else {
+			printf("%04d-%02d-%02d\n",
+			       client_opt.timestamp / 10000,
+			       client_opt.timestamp % 10000 / 100,
+			       client_opt.timestamp % 100);
+		}
 	}
 
 	close(ctrl_socket);
@@ -676,7 +686,7 @@ client_main(int argc, char **argv)
 	unsigned int year, month, day;
 	char c, *p;
 
-	while ((optchr = getopt(argc, argv, "c:p:S:g:o:t:s::q::e::n")) > -1) {
+	while ((optchr = getopt(argc, argv, "c:p:S:g:o:t:s::q::e::nm")) > -1) {
 		switch (optchr) {
 		case 'S':
 			opt.socket = optarg;
@@ -748,6 +758,15 @@ client_main(int argc, char **argv)
 			break;
 
 		case 't':
+
+			if (client_opt.minute) {
+				if (sscanf(optarg, "%u", &client_opt.timestamp) != 1) {
+					fprintf(stderr, "Unrecognized date '%s'\n", optarg);
+					return 1;
+				}
+				break;
+
+			}
 			if (sscanf(optarg, "%4u-%2u-%2u", &year, &month, &day) != 3) {
 				fprintf(stderr, "Unrecognized date '%s'\n", optarg);
 				return 1;
@@ -758,6 +777,10 @@ client_main(int argc, char **argv)
 
 		case 'n':
 			client_opt.plain_numbers = 1;
+			break;
+
+		case 'm':
+			client_opt.minute = true;
 			break;
 
 		case 's':

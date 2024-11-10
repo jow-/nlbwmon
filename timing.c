@@ -21,6 +21,7 @@
 #include <stdbool.h>
 #include <endian.h>
 #include <errno.h>
+#include <string.h>
 
 #include "timing.h"
 
@@ -134,6 +135,14 @@ interval_timestamp_monthly(const struct interval *intv, int offset)
 }
 
 static int
+interval_timestamp_minute(const struct interval *intv, int offset)
+{
+	time_t now = time(NULL);
+	uint32_t ts = (uint32_t) (now / 60);
+	return ts + offset;
+}
+
+static int
 interval_timestamp_fixed(const struct interval *intv, int offset)
 {
 	time_t now, base;
@@ -191,6 +200,12 @@ interval_pton(const char *spec, struct interval *intv)
 
 		return 0;
 	}
+	if (!strcmp(spec, "m")) {
+		intv->type  = MINUTE;
+		intv->value = 0;
+		intv->base  = 0;
+		return 0;
+	}
 
 	value = strtol(spec, &e, 10);
 
@@ -223,6 +238,10 @@ interval_ntop(const struct interval *intv, char *spec, size_t len)
 	case MONTHLY:
 		snprintf(spec, len, "%d", (int32_t)be32toh(intv->value));
 		break;
+
+	case MINUTE:
+		snprintf(spec, len, "m");
+		break;
 	}
 }
 
@@ -236,6 +255,9 @@ interval_timestamp(const struct interval *intv, int offset)
 
 	case MONTHLY:
 		return interval_timestamp_monthly(intv, offset);
+
+	case MINUTE:
+		return interval_timestamp_minute(intv, offset);
 	}
 
 	return -EINVAL;
