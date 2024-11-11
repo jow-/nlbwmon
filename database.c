@@ -618,6 +618,8 @@ database_archive(struct dbhandle *h)
 		if (err)
 			return err;
 
+		database_cleanup();
+
 		/* lazily reset database, don't (re)alloc */
 		h->off = 0;
 		h->db->entries = 0;
