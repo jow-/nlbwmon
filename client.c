@@ -92,7 +92,6 @@ static struct field fields[MAX] = {
 
 static struct {
 	int timestamp;
-	bool minute;
 	bool plain_numbers;
 	int8_t group_by[1 + MAX];
 	int8_t order_by[1 + MAX];
@@ -617,12 +616,18 @@ handle_list(void)
 		return -errno;
 	}
 
+	uint8_t interval_type;
+	if (recv(ctrl_socket, &interval_type, sizeof(interval_type), 0) <= 0) {
+		close(ctrl_socket);
+		return 0;
+	}
+
 	while (true) {
 		if (recv(ctrl_socket, &client_opt.timestamp,
 		         sizeof(client_opt.timestamp), 0) <= 0)
 			break;
 
-		if (client_opt.minute) {
+		if (interval_type == MINUTE) {
 			time_t t = client_opt.timestamp * 60;
 			struct tm *timeinfo = localtime (&t);
 			char timestr[50];
@@ -686,7 +691,7 @@ client_main(int argc, char **argv)
 	unsigned int year, month, day;
 	char c, *p;
 
-	while ((optchr = getopt(argc, argv, "c:p:S:g:o:t:s::q::e::nm")) > -1) {
+	while ((optchr = getopt(argc, argv, "c:p:S:g:o:t:s::q::e::n")) > -1) {
 		switch (optchr) {
 		case 'S':
 			opt.socket = optarg;
@@ -758,29 +763,18 @@ client_main(int argc, char **argv)
 			break;
 
 		case 't':
-
-			if (client_opt.minute) {
-				if (sscanf(optarg, "%u", &client_opt.timestamp) != 1) {
-					fprintf(stderr, "Unrecognized date '%s'\n", optarg);
-					return 1;
-				}
+			if (sscanf(optarg, "%4u-%2u-%2u", &year, &month, &day) == 3) {
+				client_opt.timestamp = year * 10000 + month * 100 + day;
 				break;
-
 			}
-			if (sscanf(optarg, "%4u-%2u-%2u", &year, &month, &day) != 3) {
-				fprintf(stderr, "Unrecognized date '%s'\n", optarg);
-				return 1;
+			else if (sscanf(optarg, "%u", &client_opt.timestamp) == 1) {
+				break;
 			}
-
-			client_opt.timestamp = year * 10000 + month * 100 + day;
-			break;
+			fprintf(stderr, "Unrecognized date '%s'\n", optarg);
+			return 1;
 
 		case 'n':
 			client_opt.plain_numbers = 1;
-			break;
-
-		case 'm':
-			client_opt.minute = true;
 			break;
 
 		case 's':

@@ -120,6 +120,9 @@ handle_list(int sock, const char *arg)
 	int delta = 0;
 	uint32_t timestamp;
 
+	if (send(sock, &opt.archive_interval.type, sizeof(opt.archive_interval.type), 0) != sizeof(opt.archive_interval.type))
+		return -errno;
+
 	while (true) {
 		timestamp = interval_timestamp(&opt.archive_interval, delta--);
 		err = database_load(NULL, opt.db.directory, timestamp);
