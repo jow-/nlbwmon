@@ -68,20 +68,35 @@ handle_dump(int sock, const char *arg)
 {
 	struct dbhandle *h;
 	struct record *rec = NULL;
-	int err = 0, timestamp = 0;
-	char *e;
+	int err = 0, timestamp = 0, g = 0;
 
 	if (arg) {
-		timestamp = strtoul(arg, &e, 10);
-
-		if (arg == e || *e)
+		if (sscanf(arg, "%d-%d", &timestamp, &g) != 2)
 			return -EINVAL;
 	}
 
-	if (timestamp == 0) {
+	if (timestamp == 0 && g == 0) {
 		h = gdbh;
 	}
 	else {
+		if (timestamp == 0) {
+			timestamp = interval_timestamp(&opt.archive_interval, -g);
+		}
+		else {
+			int delta = 0;
+			while (true) {
+				if (timestamp == interval_timestamp(&opt.archive_interval, delta)) {
+					break;
+				}
+				delta--;
+				if (opt.db.generations && delta > -opt.db.generations)
+					continue;
+
+				return -EINVAL;
+			}
+			timestamp = interval_timestamp(&opt.archive_interval, delta - g);
+		}
+
 		h = database_init(&opt.archive_interval, false, 0);
 
 		if (!h) {

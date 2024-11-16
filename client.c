@@ -92,6 +92,7 @@ static struct field fields[MAX] = {
 
 static struct {
 	int timestamp;
+	unsigned int generations;
 	bool plain_numbers;
 	int8_t group_by[1 + MAX];
 	int8_t order_by[1 + MAX];
@@ -102,6 +103,7 @@ static struct {
 	.separator = '\t',
 	.escape = '"',
 	.quote = '"',
+	.generations = 1
 };
 
 struct command {
@@ -217,49 +219,52 @@ recv_database(struct dbhandle **h)
 	int i, len, err, ctrl_socket;
 	struct database db;
 	struct record rec;
-	char req[sizeof("dump -2147483648\0")];
-
-	ctrl_socket = usock(USOCK_UNIX, opt.socket, NULL);
-
-	if (!ctrl_socket)
-		return -errno;
-
-	len = snprintf(req, sizeof(req), "dump %d", client_opt.timestamp);
-
-	if (send(ctrl_socket, req, len, 0) != len) {
-		close(ctrl_socket);
-		return -errno;
-	}
-
-	if (recv(ctrl_socket, &db, sizeof(db), 0) != sizeof(db)) {
-		close(ctrl_socket);
-		return -ENODATA;
-	}
+	char req[100];
 
 	*h = database_mem(cmp_fn, client_opt.group_by);
 
 	if (!*h) {
-		close(ctrl_socket);
 		return -ENOMEM;
 	}
 
-	for (i = 0; i < db_entries(&db); i++) {
-		if (recv(ctrl_socket, &rec, db_recsize, 0) != db_recsize) {
+	for (int g = 0; g < client_opt.generations; g++) {
+
+		ctrl_socket = usock(USOCK_UNIX, opt.socket, NULL);
+
+		if (!ctrl_socket)
+			return -errno;
+
+		len = snprintf(req, sizeof(req), "dump %d-%d", client_opt.timestamp, g);
+
+		if (send(ctrl_socket, req, len, 0) != len) {
+			close(ctrl_socket);
+			return -errno;
+		}
+
+		if (recv(ctrl_socket, &db, sizeof(db), 0) != sizeof(db)) {
 			close(ctrl_socket);
 			return -ENODATA;
 		}
 
-		err = database_insert(*h, &rec);
+		for (i = 0; i < db_entries(&db); i++) {
+			if (recv(ctrl_socket, &rec, db_recsize, 0) != db_recsize) {
+				close(ctrl_socket);
+				return -ENODATA;
+			}
 
-		if (err != 0) {
-			close(ctrl_socket);
-			return err;
+			err = database_insert(*h, &rec);
+
+			if (err != 0) {
+				close(ctrl_socket);
+				return err;
+			}
 		}
+
+		close(ctrl_socket);
 	}
 
 	database_reorder(*h, sort_fn, client_opt.order_by);
 
-	close(ctrl_socket);
 	return 0;
 }
 
@@ -631,7 +636,7 @@ handle_list(void)
 			time_t t = client_opt.timestamp * 60;
 			struct tm *timeinfo = localtime (&t);
 			char timestr[50];
-			strftime(timestr, sizeof(timestr), "%F %T", timeinfo);
+			strftime(timestr, sizeof(timestr), "%F %T %Z", timeinfo);
 			printf ("%d (%s)\n", client_opt.timestamp, timestr);
 		}
 		else {
@@ -691,7 +696,7 @@ client_main(int argc, char **argv)
 	unsigned int year, month, day;
 	char c, *p;
 
-	while ((optchr = getopt(argc, argv, "c:p:S:g:o:t:s::q::e::n")) > -1) {
+	while ((optchr = getopt(argc, argv, "c:p:S:g:o:t:s::q::e::nG:")) > -1) {
 		switch (optchr) {
 		case 'S':
 			opt.socket = optarg;
@@ -772,6 +777,13 @@ client_main(int argc, char **argv)
 			}
 			fprintf(stderr, "Unrecognized date '%s'\n", optarg);
 			return 1;
+
+		case 'G':
+			if (sscanf(optarg, "%2u", &client_opt.generations) != 1) {
+				fprintf(stderr, "Unrecognized generations '%s'\n", optarg);
+				return 1;
+			}
+			break;
 
 		case 'n':
 			client_opt.plain_numbers = 1;
