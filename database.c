@@ -454,6 +454,7 @@ database_restore_gzip(struct dbhandle *h, const char *path, uint32_t timestamp)
 
 	if (h) {
 		h->pristine = false;
+		h->db->timestamp = htobe32(timestamp);
 
 		for (i = 0; i < entries; i++) {
 			if (gzread(gz, &rec, db_recsize) != db_recsize) {
