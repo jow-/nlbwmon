@@ -153,7 +153,7 @@ handle_list(int sock, const char *arg)
 			break;
 		}
 
-		if (send(sock, &timestamp, sizeof(timestamp), 0) != sizeof(timestamp))
+		if (send_data(sock, &timestamp, sizeof(timestamp)) != sizeof(timestamp))
 			return -errno;
 	}
 
