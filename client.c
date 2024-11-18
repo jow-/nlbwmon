@@ -621,8 +621,8 @@ handle_list(void)
 		return -errno;
 	}
 
-	uint8_t interval_type;
-	if (recv(ctrl_socket, &interval_type, sizeof(interval_type), 0) <= 0) {
+	struct interval interval;
+	if (recv(ctrl_socket, &interval, sizeof(interval), 0) <= 0) {
 		close(ctrl_socket);
 		return 0;
 	}
@@ -632,7 +632,7 @@ handle_list(void)
 		         sizeof(client_opt.timestamp), 0) <= 0)
 			break;
 
-		if (interval_type == MINUTE) {
+		if (interval.type == MINUTE) {
 			time_t t = client_opt.timestamp * 60;
 			struct tm *timeinfo = localtime (&t);
 			char timestr[50];

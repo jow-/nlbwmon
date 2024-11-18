@@ -135,7 +135,7 @@ handle_list(int sock, const char *arg)
 	int delta = 0;
 	uint32_t timestamp;
 
-	if (send(sock, &opt.archive_interval.type, sizeof(opt.archive_interval.type), 0) != sizeof(opt.archive_interval.type))
+	if (send(sock, &opt.archive_interval, sizeof(opt.archive_interval), 0) != sizeof(opt.archive_interval))
 		return -errno;
 
 	while (true) {

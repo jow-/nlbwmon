@@ -138,8 +138,8 @@ static int
 interval_timestamp_minute(const struct interval *intv, int offset)
 {
 	time_t now = time(NULL);
-	uint32_t ts = (uint32_t) (now / 60);
-	return ts + offset;
+	uint32_t ts = (uint32_t) (intv->value * (now / (60 * intv->value)));
+	return ts + (offset * intv->value);
 }
 
 static int
@@ -200,9 +200,9 @@ interval_pton(const char *spec, struct interval *intv)
 
 		return 0;
 	}
-	if (!strcmp(spec, "m")) {
+	if (sscanf(spec, "%um", &value) == 1) {
 		intv->type  = MINUTE;
-		intv->value = 0;
+		intv->value = value;
 		intv->base  = 0;
 		return 0;
 	}
@@ -240,7 +240,7 @@ interval_ntop(const struct interval *intv, char *spec, size_t len)
 		break;
 
 	case MINUTE:
-		snprintf(spec, len, "m");
+		snprintf(spec, len, "%um", (int32_t)be32toh(intv->value));
 		break;
 	}
 }
