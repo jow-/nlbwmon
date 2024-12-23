@@ -44,13 +44,14 @@ Each time the conntrack entries are polled, their counters are reset (zero-on-re
 <dd>Accounting period interval.  May be either in the format YYYY-MM-DD/NN,
 to start a new accounting period exactly every NN days, beginning at
 the given date, or a number specifiying the day of month at which to
-start the next accounting period.  For example:</dd>
+start the next accounting period, or in the format MMm for MM minutes.  For example:</dd>
 </dl>
 
 ```
 2017-01-17/14   # every 14 days, starting Jan 17, 2017
 -2              # second to the last day of the month, e.g. 30th in March
 1               # first day of the month (default)
+60m             # every hour
 ```
 
 <dl>
@@ -78,7 +79,7 @@ storage requirements.</dd>
 <dt>-c command</dt>
 <dd>Specify a command.  Current commands are: show, json, csv, list, commit.  See below for more information about commands.</dd>
 
-<dt>-p /path/to/procol-database</dt>
+<dt>-p /path/to/protocol-database</dt>
 <dd>Protocol description file, used to distinguish traffic streams by IP protocol number and port.</dd>
 
 <dt>-g col[,col]</dt>
@@ -87,7 +88,7 @@ storage requirements.</dd>
 <dt>-o col[,col]</dt>
 <dd>Order output by the specified column.  Prefix column with a - to invert order.</dd>
 
-<dt>-t YYYY-MM-DD</dt>
+<dt>-t YYYY-MM-DD|timestamp</dt>
 <dd>Read data from the specified database, instead of the active database.  Use the list command to view available databases.</dd>
 
 <dt>-n</dt>
@@ -101,6 +102,9 @@ storage requirements.</dd>
 
 <dt>-e char</dt>
 <dd>Specify the escape character when using CSV format.  If no argument is provided, an empty string is assumed.  Currently only applies to CSV format.</dd>
+
+<dt>-G count</dt>
+<dd>Number of database generations to retrieve.  Data from databases are summed. Note: connection is counted in each database, so connection spanning two intervals is counted twice.</dd>
 </dl>
 
 

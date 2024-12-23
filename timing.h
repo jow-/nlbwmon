@@ -25,6 +25,7 @@
 enum interval_type {
 	MONTHLY = 1,
 	FIXED   = 2,
+	MINUTE  = 3
 };
 
 struct interval {

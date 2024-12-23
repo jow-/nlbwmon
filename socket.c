@@ -68,20 +68,35 @@ handle_dump(int sock, const char *arg)
 {
 	struct dbhandle *h;
 	struct record *rec = NULL;
-	int err = 0, timestamp = 0;
-	char *e;
+	int err = 0, timestamp = 0, g = 0;
 
 	if (arg) {
-		timestamp = strtoul(arg, &e, 10);
-
-		if (arg == e || *e)
+		if (sscanf(arg, "%d-%d", &timestamp, &g) != 2)
 			return -EINVAL;
 	}
 
-	if (timestamp == 0) {
+	if (timestamp == 0 && g == 0) {
 		h = gdbh;
 	}
 	else {
+		if (timestamp == 0) {
+			timestamp = interval_timestamp(&opt.archive_interval, -g);
+		}
+		else {
+			int delta = 0;
+			while (true) {
+				if (timestamp == interval_timestamp(&opt.archive_interval, delta)) {
+					break;
+				}
+				delta--;
+				if (opt.db.generations && delta > -opt.db.generations)
+					continue;
+
+				return -EINVAL;
+			}
+			timestamp = interval_timestamp(&opt.archive_interval, delta - g);
+		}
+
 		h = database_init(&opt.archive_interval, false, 0);
 
 		if (!h) {
@@ -120,6 +135,9 @@ handle_list(int sock, const char *arg)
 	int delta = 0;
 	uint32_t timestamp;
 
+	if (send(sock, &opt.archive_interval, sizeof(opt.archive_interval), 0) != sizeof(opt.archive_interval))
+		return -errno;
+
 	while (true) {
 		timestamp = interval_timestamp(&opt.archive_interval, delta--);
 		err = database_load(NULL, opt.db.directory, timestamp);
@@ -129,10 +147,13 @@ handle_list(int sock, const char *arg)
 				fprintf(stderr, "Corrupted database detected: %d (%s)\n",
 				        timestamp, strerror(-err));
 
+			if (opt.db.generations && delta > -opt.db.generations)
+				continue;
+
 			break;
 		}
 
-		if (send(sock, &timestamp, sizeof(timestamp), 0) != sizeof(timestamp))
+		if (send_data(sock, &timestamp, sizeof(timestamp)) != sizeof(timestamp))
 			return -errno;
 	}
 

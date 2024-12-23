@@ -454,6 +454,7 @@ database_restore_gzip(struct dbhandle *h, const char *path, uint32_t timestamp)
 
 	if (h) {
 		h->pristine = false;
+		h->db->timestamp = htobe32(timestamp);
 
 		for (i = 0; i < entries; i++) {
 			if (gzread(gz, &rec, db_recsize) != db_recsize) {
@@ -563,7 +564,7 @@ database_load(struct dbhandle *h, const char *path, uint32_t timestamp)
 int
 database_cleanup(void)
 {
-	uint32_t timestamp, num;
+	uint32_t timestamp, num, safe_low;
 	struct dirent *entry;
 	char *e, path[256];
 	DIR *d;
@@ -579,6 +580,8 @@ database_cleanup(void)
 	errno = 0;
 	timestamp = interval_timestamp(&opt.archive_interval, -opt.db.generations);
 
+    safe_low = opt.archive_interval.type == MINUTE ? 1704067200 / 60 : 20000101;
+
 	while ((entry = readdir(d)) != NULL) {
 		if (entry->d_type != DT_REG)
 			continue;
@@ -591,7 +594,7 @@ database_cleanup(void)
 		if (strcmp(e, ".db") != 0 && strcmp(e, ".db.gz") != 0)
 			continue;
 
-		if (num < 20000101 || num > timestamp)
+		if (num < safe_low || num > timestamp)
 			continue;
 
 		snprintf(path, sizeof(path), "%s/%u%s", opt.db.directory, num, e);
@@ -617,6 +620,8 @@ database_archive(struct dbhandle *h)
 
 		if (err)
 			return err;
+
+		database_cleanup();
 
 		/* lazily reset database, don't (re)alloc */
 		h->off = 0;
