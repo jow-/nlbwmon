@@ -147,7 +147,7 @@ format_num(uint64_t n)
 {
 	uint64_t e = 0x1000000000000000;
 	const char *unit = "EPTGMK";
-	static char buf[10];
+	static char buf[40];
 
 	n = be64toh(n);
 
