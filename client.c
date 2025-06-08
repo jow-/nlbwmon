@@ -92,6 +92,7 @@ static struct field fields[MAX] = {
 
 static struct {
 	int timestamp;
+	unsigned int generations;
 	bool plain_numbers;
 	int8_t group_by[1 + MAX];
 	int8_t order_by[1 + MAX];
@@ -102,6 +103,7 @@ static struct {
 	.separator = '\t',
 	.escape = '"',
 	.quote = '"',
+	.generations = 1
 };
 
 struct command {
@@ -217,49 +219,52 @@ recv_database(struct dbhandle **h)
 	int i, len, err, ctrl_socket;
 	struct database db;
 	struct record rec;
-	char req[sizeof("dump YYYYMMDD\0")];
-
-	ctrl_socket = usock(USOCK_UNIX, opt.socket, NULL);
-
-	if (!ctrl_socket)
-		return -errno;
-
-	len = snprintf(req, sizeof(req), "dump %d", client_opt.timestamp);
-
-	if (send(ctrl_socket, req, len, 0) != len) {
-		close(ctrl_socket);
-		return -errno;
-	}
-
-	if (recv(ctrl_socket, &db, sizeof(db), 0) != sizeof(db)) {
-		close(ctrl_socket);
-		return -ENODATA;
-	}
+	char req[100];
 
 	*h = database_mem(cmp_fn, client_opt.group_by);
 
 	if (!*h) {
-		close(ctrl_socket);
 		return -ENOMEM;
 	}
 
-	for (i = 0; i < db_entries(&db); i++) {
-		if (recv(ctrl_socket, &rec, db_recsize, 0) != db_recsize) {
+	for (int g = 0; g < client_opt.generations; g++) {
+
+		ctrl_socket = usock(USOCK_UNIX, opt.socket, NULL);
+
+		if (!ctrl_socket)
+			return -errno;
+
+		len = snprintf(req, sizeof(req), "dump %d-%d", client_opt.timestamp, g);
+
+		if (send(ctrl_socket, req, len, 0) != len) {
+			close(ctrl_socket);
+			return -errno;
+		}
+
+		if (recv(ctrl_socket, &db, sizeof(db), 0) != sizeof(db)) {
 			close(ctrl_socket);
 			return -ENODATA;
 		}
 
-		err = database_insert(*h, &rec);
+		for (i = 0; i < db_entries(&db); i++) {
+			if (recv(ctrl_socket, &rec, db_recsize, 0) != db_recsize) {
+				close(ctrl_socket);
+				return -ENODATA;
+			}
 
-		if (err != 0) {
-			close(ctrl_socket);
-			return err;
+			err = database_insert(*h, &rec);
+
+			if (err != 0) {
+				close(ctrl_socket);
+				return err;
+			}
 		}
+
+		close(ctrl_socket);
 	}
 
 	database_reorder(*h, sort_fn, client_opt.order_by);
 
-	close(ctrl_socket);
 	return 0;
 }
 
@@ -297,14 +302,14 @@ handle_show(void)
 		printf("%c Fam ", columns[FAMILY]);
 
 	if (columns[HOST]) {
-		printf("         %c Host (    MAC )  ", columns[HOST]);
+		printf("                                 %c Host (    MAC )  ", columns[HOST]);
 	}
 	else {
 		if (columns[MAC])
 			printf("            %c MAC  ", columns[MAC]);
 
 		if (columns[IP])
-			printf("           %c IP  ", columns[IP]);
+			printf("                                   %c IP  ", columns[IP]);
 	}
 
 	if (columns[LAYER7]) {
@@ -328,7 +333,7 @@ handle_show(void)
 			printf("IPv%d  ", rec->family == AF_INET ? 4 : 6);
 
 		if (columns[HOST]) {
-			printf("%15s (%02x:%02x:%02x)  ",
+			printf("%39s (%02x:%02x:%02x)  ",
 			       format_ipaddr(rec->family, &rec->src_addr),
 			       rec->src_mac.ea.ether_addr_octet[3],
 			       rec->src_mac.ea.ether_addr_octet[4],
@@ -339,7 +344,7 @@ handle_show(void)
 				printf("%17s  ", format_macaddr(&rec->src_mac.ea));
 
 			if (columns[IP])
-				printf("%15s  ", format_ipaddr(rec->family, &rec->src_addr));
+				printf("%39s  ", format_ipaddr(rec->family, &rec->src_addr));
 		}
 
 		if (columns[LAYER7]) {
@@ -616,15 +621,30 @@ handle_list(void)
 		return -errno;
 	}
 
+	struct interval interval;
+	if (recv(ctrl_socket, &interval, sizeof(interval), 0) <= 0) {
+		close(ctrl_socket);
+		return 0;
+	}
+
 	while (true) {
 		if (recv(ctrl_socket, &client_opt.timestamp,
 		         sizeof(client_opt.timestamp), 0) <= 0)
 			break;
 
-		printf("%04d-%02d-%02d\n",
-		       client_opt.timestamp / 10000,
-		       client_opt.timestamp % 10000 / 100,
-		       client_opt.timestamp % 100);
+		if (interval.type == MINUTE) {
+			time_t t = client_opt.timestamp * 60;
+			struct tm *timeinfo = localtime (&t);
+			char timestr[50];
+			strftime(timestr, sizeof(timestr), "%F %T %Z", timeinfo);
+			printf ("%d (%s)\n", client_opt.timestamp, timestr);
+		}
+		else {
+			printf("%04d-%02d-%02d\n",
+			       client_opt.timestamp / 10000,
+			       client_opt.timestamp % 10000 / 100,
+			       client_opt.timestamp % 100);
+		}
 	}
 
 	close(ctrl_socket);
@@ -676,7 +696,7 @@ client_main(int argc, char **argv)
 	unsigned int year, month, day;
 	char c, *p;
 
-	while ((optchr = getopt(argc, argv, "c:p:S:g:o:t:s::q::e::n")) > -1) {
+	while ((optchr = getopt(argc, argv, "c:p:S:g:o:t:s::q::e::nG:")) > -1) {
 		switch (optchr) {
 		case 'S':
 			opt.socket = optarg;
@@ -748,12 +768,21 @@ client_main(int argc, char **argv)
 			break;
 
 		case 't':
-			if (sscanf(optarg, "%4u-%2u-%2u", &year, &month, &day) != 3) {
-				fprintf(stderr, "Unrecognized date '%s'\n", optarg);
+			if (sscanf(optarg, "%4u-%2u-%2u", &year, &month, &day) == 3) {
+				client_opt.timestamp = year * 10000 + month * 100 + day;
+				break;
+			}
+			else if (sscanf(optarg, "%u", &client_opt.timestamp) == 1) {
+				break;
+			}
+			fprintf(stderr, "Unrecognized date '%s'\n", optarg);
+			return 1;
+
+		case 'G':
+			if (sscanf(optarg, "%2u", &client_opt.generations) != 1) {
+				fprintf(stderr, "Unrecognized generations '%s'\n", optarg);
 				return 1;
 			}
-
-			client_opt.timestamp = year * 10000 + month * 100 + day;
 			break;
 
 		case 'n':
